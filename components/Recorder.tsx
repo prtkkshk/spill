@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface RecorderProps {
   onRecordingComplete: (result: { success: boolean; recording: any; tasks: any[] }) => void;
@@ -188,22 +189,22 @@ export default function Recorder({ onRecordingComplete }: RecorderProps) {
   return (
     <div className="flex flex-col items-center justify-center p-6 w-full max-w-md mx-auto">
       {state === 'explaining' ? (
-        <div className="bg-slate-800/80 backdrop-blur-md rounded-2xl p-6 border border-slate-700 shadow-xl w-full text-center space-y-4 mb-6 transition-all duration-300">
-          <h3 className="text-xl font-bold text-slate-100">Microphone Permission</h3>
-          <p className="text-sm text-slate-300">
+        <div className="bg-glass-surface/85 border border-glass-border/30 backdrop-blur-xl rounded-3xl p-6 shadow-xl w-full text-center space-y-4 mb-6 transition-all duration-300">
+          <h3 className="text-xl font-extrabold text-text-primary">Microphone Permission</h3>
+          <p className="text-sm text-text-secondary leading-relaxed">
             FocusFlow transcribes and extracts action items from your audio brain-dump.
-            We need microphone access to record your thoughts. Your audio is sent directly to Gemini Flash.
+            We need microphone access to record your thoughts. Your audio is processed privately by Gemini.
           </p>
           <div className="flex space-x-3 pt-2">
             <button
               onClick={() => setState('idle')}
-              className="flex-1 py-2 px-4 bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-300 text-sm font-semibold transition"
+              className="flex-1 py-2.5 px-4 bg-glass-surface border border-glass-border/40 hover:bg-accent/10 rounded-xl text-text-primary text-sm font-bold transition duration-200 cursor-pointer"
             >
               Cancel
             </button>
             <button
               onClick={startMediaRecorder}
-              className="flex-1 py-2 px-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-semibold transition shadow-md shadow-indigo-600/30"
+              className="flex-1 py-2.5 px-4 bg-accent hover:bg-accent-strong text-white rounded-xl text-sm font-bold transition duration-200 shadow-md shadow-accent/25 cursor-pointer"
             >
               Allow Mic
             </button>
@@ -212,87 +213,125 @@ export default function Recorder({ onRecordingComplete }: RecorderProps) {
       ) : null}
 
       {/* Visual State Indicators */}
-      <div className="text-center mb-6 h-12 flex flex-col justify-center">
+      <div className="text-center mb-6 h-14 flex flex-col justify-center transition-colors duration-500">
         {state === 'recording' && (
           <div className="flex flex-col items-center space-y-1">
             <div className="flex items-center space-x-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-rose-500 animate-ping" />
-              <span className="text-sm font-semibold text-rose-400 uppercase tracking-widest">Recording</span>
+              <span className="h-2 w-2 rounded-full bg-danger animate-ping" />
+              <span className="text-xs font-bold text-danger uppercase tracking-widest">Recording</span>
             </div>
-            <span className="text-2xl font-mono font-bold text-slate-100">{formatTime(secondsElapsed)}</span>
+            <span className="text-2xl font-extrabold tracking-tight text-text-primary tabular-nums">
+              {formatTime(secondsElapsed)}
+            </span>
           </div>
         )}
 
         {state === 'uploading' && (
-          <span className="text-sm font-semibold text-sky-400 animate-pulse uppercase tracking-wider">
+          <span className="text-xs font-extrabold text-accent animate-pulse uppercase tracking-wider">
             Uploading raw audio...
           </span>
         )}
 
         {state === 'parsing' && (
-          <span className="text-sm font-semibold text-indigo-400 animate-pulse uppercase tracking-wider">
+          <span className="text-xs font-extrabold text-accent animate-pulse uppercase tracking-wider">
             Gemini is extracting tasks...
           </span>
         )}
 
         {state === 'success' && (
-          <span className="text-sm font-semibold text-emerald-400 uppercase tracking-wider flex items-center justify-center">
-            ✓ Tasks Parsed Successfully!
+          <span className="text-xs font-extrabold text-success uppercase tracking-wider flex items-center justify-center space-x-1.5">
+            <span>✓ Tasks Parsed Successfully!</span>
           </span>
         )}
 
         {state === 'error' && (
           <div className="text-center max-w-sm px-4">
-            <span className="text-xs font-semibold text-rose-400 uppercase tracking-wider block">Error</span>
-            <span className="text-xs text-rose-300 line-clamp-2">{errorMessage}</span>
+            <span className="text-[10px] font-extrabold text-danger uppercase tracking-wider block">Error</span>
+            <span className="text-xs text-text-secondary line-clamp-2 mt-0.5">{errorMessage}</span>
           </div>
         )}
 
         {state === 'idle' && (
-          <span className="text-xs text-slate-400">
+          <span className="text-xs font-medium text-text-secondary">
             Tap mic to dump your thoughts (up to 3 min)
           </span>
         )}
       </div>
 
-      {/* Main Mic Button */}
-      <button
-        onClick={handleMicClick}
-        disabled={state === 'uploading' || state === 'parsing' || state === 'success'}
-        className={`relative h-32 w-32 rounded-full flex items-center justify-center transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-indigo-500/50 ${
-          state === 'recording'
-            ? 'bg-rose-600 hover:bg-rose-500 shadow-[0_0_30px_rgba(239,68,68,0.5)] scale-110'
-            : 'bg-gradient-to-tr from-indigo-600 to-indigo-500 hover:scale-105 shadow-[0_0_20px_rgba(99,102,241,0.3)] hover:shadow-indigo-600/40'
-        } disabled:opacity-50 disabled:scale-100 disabled:shadow-none`}
-        aria-label={state === 'recording' ? 'Stop recording' : 'Start recording'}
-      >
-        {state === 'recording' ? (
-          // Stop icon (square)
-          <div className="h-8 w-8 bg-white rounded-md animate-pulse" />
-        ) : (
-          // Mic icon
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-14 w-14 text-white"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
+      {/* Main Mic Button with Ambient Concentric Pulse (Phase 4) */}
+      <div className="relative flex items-center justify-center">
+        <AnimatePresence>
+          {state === 'recording' && (
+            <>
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0.5 }}
+                animate={{ scale: 1.4, opacity: 0 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeOut' }}
+                className="absolute h-36 w-36 rounded-full border border-danger/40 bg-danger/5 pointer-events-none"
+              />
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0.6 }}
+                animate={{ scale: 1.7, opacity: 0 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: 'easeOut', delay: 0.5 }}
+                className="absolute h-36 w-36 rounded-full border border-danger/35 bg-danger/5 pointer-events-none"
+              />
+            </>
+          )}
+        </AnimatePresence>
+
+        <motion.div
+          animate={state === 'idle' ? {
+            scale: [1, 1.03, 1],
+            transition: { duration: 3, repeat: Infinity, ease: "easeInOut" }
+          } : {}}
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.96 }}
+          className="relative z-10"
+        >
+          <button
+            onClick={handleMicClick}
+            disabled={state === 'uploading' || state === 'parsing' || state === 'success'}
+            className={`h-36 w-36 rounded-full flex items-center justify-center transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-accent/30 ${
+              state === 'recording'
+                ? 'bg-gradient-to-tr from-danger to-danger/80 shadow-[0_0_30px_rgba(225,79,90,0.45)] scale-110'
+                : 'bg-gradient-to-tr from-accent to-accent-strong shadow-[0_0_25px_rgba(124,108,255,0.25)] hover:shadow-accent/40'
+            } disabled:opacity-40 disabled:scale-100 disabled:shadow-none cursor-pointer border-4 border-glass-border/30 backdrop-blur-md`}
+            aria-label={state === 'recording' ? 'Stop recording' : 'Start recording'}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-            />
-          </svg>
-        )}
-      </button>
+            {state === 'recording' ? (
+              // Stop icon (square)
+              <div className="h-7 w-7 bg-white rounded-md animate-pulse" />
+            ) : state === 'uploading' || state === 'parsing' ? (
+              // Spinner
+              <div className="h-8 w-8 rounded-full border-4 border-t-white border-white/20 animate-spin" />
+            ) : (
+              // Mic icon
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-14 w-14 text-white"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.75}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                />
+              </svg>
+            )}
+          </button>
+        </motion.div>
+      </div>
 
       {/* Back to normal link if error */}
       {state === 'error' && (
         <button
           onClick={() => setState('idle')}
-          className="mt-4 text-xs text-indigo-400 hover:underline hover:text-indigo-300 font-semibold"
+          className="mt-5 text-xs text-accent hover:underline hover:text-accent-strong font-bold transition cursor-pointer"
         >
           Reset Recorder
         </button>

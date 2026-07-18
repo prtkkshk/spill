@@ -98,8 +98,8 @@ describe('TaskList Component Tests', () => {
     const emptyTasks = { today: [], this_week: [], next_week: [], anytime: [] };
     render(<TaskList initialTasks={emptyTasks} onRefreshNeeded={mockOnRefreshNeeded} />);
 
-    expect(screen.getByText('No pending tasks!')).toBeInTheDocument();
-    expect(screen.getByText(/You're all clear/i)).toBeInTheDocument();
+    expect(screen.getByText("All clear, you're doing great!")).toBeInTheDocument();
+    expect(screen.getByText(/No pending tasks left/i)).toBeInTheDocument();
   });
 
   it('performs optimistic check and calls patch on toggle complete', async () => {
