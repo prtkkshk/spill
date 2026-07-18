@@ -105,7 +105,13 @@ export default function Home() {
   const totalPending = tasks.today.length + tasks.this_week.length + tasks.next_week.length + tasks.anytime.length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 flex flex-col font-sans select-none pb-12">
+    <div className="min-h-screen bg-bg-base text-text-primary flex flex-col font-sans select-none pb-12 relative overflow-hidden transition-colors duration-500">
+      {/* Dynamic Ambient Background Layer (Phase 2) */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-[-10%] left-[-10%] w-[70vw] h-[70vw] rounded-full bg-orb-1 opacity-[0.18] dark:opacity-[0.25] blur-[100px] sm:blur-[140px] animate-blob-drift transition-colors duration-500" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[80vw] h-[80vw] rounded-full bg-orb-2 opacity-[0.18] dark:opacity-[0.25] blur-[100px] sm:blur-[140px] animate-blob-drift-delayed transition-colors duration-500" />
+        <div className="absolute inset-0 noise-overlay" />
+      </div>
       {/* Header / Premium Glassmorphic Top Nav */}
       <header className="sticky top-0 z-10 w-full bg-slate-950/80 backdrop-blur-md border-b border-slate-800/80 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center space-x-2">

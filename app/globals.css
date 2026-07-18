@@ -113,3 +113,50 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
+
+/* Ambient background styling */
+.noise-overlay {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.02;
+}
+
+@keyframes blob-drift {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1) rotate(0deg);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.95) rotate(180deg);
+  }
+}
+
+@keyframes blob-drift-delayed {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(-40px, 30px) scale(0.9) rotate(0deg);
+  }
+  66% {
+    transform: translate(30px, -20px) scale(1.05) rotate(-180deg);
+  }
+}
+
+.animate-blob-drift {
+  animation: blob-drift 25s ease-in-out infinite;
+}
+
+.animate-blob-drift-delayed {
+  animation: blob-drift-delayed 35s ease-in-out infinite;
+}
+
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .animate-blob-drift,
+  .animate-blob-drift-delayed {
+    animation: none !important;
+    transform: none !important;
+  }
+}
