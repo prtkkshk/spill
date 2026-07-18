@@ -133,6 +133,50 @@ describe('Gemini Logic Unit Tests', () => {
     expect(result.tasks[0].energy_level).toBe('low_focus'); // Fallback default
   });
 
+  it('successfully extracts and parses JSON even if wrapped in markdown code fences or comments', async () => {
+    const rawWrappedText = `
+    Here is your JSON response:
+    \`\`\`json
+    {
+      "transcript": "Hello world",
+      "tasks": [
+        {
+          "description": "Clean my desk",
+          "fuzzy_deadline": "today",
+          "energy_level": "low_focus",
+          "context": "office",
+          "specific_deadline": ""
+        }
+      ]
+    }
+    \`\`\`
+    Hope this helps!
+    `;
+    const mockGeminiResponse = {
+      candidates: [
+        {
+          content: {
+            parts: [
+              {
+                text: rawWrappedText,
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => mockGeminiResponse,
+    });
+
+    const result = await parseAudioBrainDump('base64String', 'audio/webm');
+    expect(result.transcript).toBe('Hello world');
+    expect(result.tasks).toHaveLength(1);
+    expect(result.tasks[0].description).toBe('Clean my desk');
+  });
+
   it('throws an error and logs the raw content on invalid JSON parse failures', async () => {
     const rawFailingText = 'This is not valid JSON string at all';
     const mockGeminiResponse = {

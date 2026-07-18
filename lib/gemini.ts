@@ -125,8 +125,18 @@ export async function parseAudioBrainDump(
     throw new Error('Gemini API returned an empty response or invalid content structure');
   }
 
+  const cleanedRawText = rawText.trim();
+  let jsonString = cleanedRawText;
+
+  // Extract JSON payload if wrapped in markdown code blocks or trailing commentary
+  const firstCurly = cleanedRawText.indexOf('{');
+  const lastCurly = cleanedRawText.lastIndexOf('}');
+  if (firstCurly !== -1 && lastCurly !== -1 && lastCurly > firstCurly) {
+    jsonString = cleanedRawText.substring(firstCurly, lastCurly + 1);
+  }
+
   try {
-    const parsed: ParseResult = JSON.parse(rawText.trim());
+    const parsed: ParseResult = JSON.parse(jsonString);
     
     // Normalize properties to ensure they fit database/type restrictions
     if (typeof parsed.transcript !== 'string') {
