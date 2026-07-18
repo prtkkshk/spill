@@ -122,6 +122,41 @@ export default function Home() {
     }
   }, [tasks]);
 
+  const [quickTaskText, setQuickTaskText] = useState('');
+  const [isSubmittingQuickTask, setIsSubmittingQuickTask] = useState(false);
+
+  const handleQuickAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickTaskText.trim()) return;
+
+    setIsSubmittingQuickTask(true);
+    try {
+      const response = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          description: quickTaskText.trim(),
+          fuzzy_deadline: 'today',
+          energy_level: 'low_focus',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save manual task');
+      }
+
+      setQuickTaskText('');
+      handleRefresh(); // Refresh task list
+    } catch (err) {
+      console.error('Quick add failed:', err);
+      alert('Failed to add task. Please check database connection.');
+    } finally {
+      setIsSubmittingQuickTask(false);
+    }
+  };
+
   const handleRefresh = () => {
     setRefreshKey((prev) => prev + 1);
   };
@@ -251,6 +286,41 @@ export default function Home() {
         <section className="w-full flex justify-center py-4">
           <Recorder onRecordingComplete={handleRecordingComplete} />
         </section>
+
+        {/* Quick Add Inline Form (Phase 9) */}
+        <form onSubmit={handleQuickAdd} className="w-full px-1">
+          <div className="relative flex items-center bg-glass-surface/50 border border-glass-border/30 rounded-2xl p-1.5 focus-within:ring-2 focus-within:ring-accent/30 focus-within:border-glass-border/50 transition-all duration-300 shadow-sm">
+            <input
+              type="text"
+              value={quickTaskText}
+              onChange={(e) => setQuickTaskText(e.target.value)}
+              disabled={isSubmittingQuickTask}
+              placeholder="Type a quick task..."
+              className="flex-1 bg-transparent px-3 py-1.5 text-sm text-text-primary placeholder-text-secondary/50 focus:outline-none disabled:opacity-50"
+            />
+            <button
+              type="submit"
+              disabled={isSubmittingQuickTask || !quickTaskText.trim()}
+              className="h-9 w-9 rounded-xl bg-accent text-white flex items-center justify-center transition-all duration-200 hover:bg-accent-strong disabled:opacity-30 disabled:scale-100 cursor-pointer shadow-sm shadow-accent/20"
+              aria-label="Add task manually"
+            >
+              {isSubmittingQuickTask ? (
+                <div className="h-4 w-4 rounded-full border-2 border-t-transparent border-white animate-spin" />
+              ) : (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+              )}
+            </button>
+          </div>
+        </form>
 
         {/* Divider / Section separator */}
         <div className="w-full border-t border-slate-800/60" />

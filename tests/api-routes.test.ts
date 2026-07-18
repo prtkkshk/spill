@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GET as getTasksRoute, PATCH as patchTasksRoute } from '@/app/api/tasks/route';
+import { GET as getTasksRoute, POST as postTasksRoute, PATCH as patchTasksRoute } from '@/app/api/tasks/route';
 import { POST as cronRoute } from '@/app/api/cron/daily-reminder/route';
 import { POST as subscriptionRoute } from '@/app/api/push-subscription/route';
 
@@ -95,6 +95,56 @@ describe('API Route Unit Tests', () => {
       expect(json.task.id).toBe('task-123');
       expect(json.task.status).toBe('completed');
       expect(json.task.completed_at).toBeDefined();
+    });
+  });
+
+  describe('POST /api/tasks', () => {
+    it('creates a manual task and returns the created task details', async () => {
+      const mockReq = {
+        json: async () => ({
+          description: 'New manual task',
+          fuzzy_deadline: 'today',
+          energy_level: 'low_focus',
+        }),
+      } as Request;
+
+      const mockCreatedTask = {
+        id: 'new-task-123',
+        description: 'New manual task',
+        status: 'pending',
+        fuzzy_deadline: 'today',
+        energy_level: 'low_focus',
+        created_at: new Date().toISOString(),
+      };
+
+      mockInsert.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          single: mockSingle.mockResolvedValue({ data: mockCreatedTask, error: null }),
+        }),
+      });
+
+      const response = await postTasksRoute(mockReq);
+      expect(response.status).toBe(200);
+
+      const json = await response.json();
+      expect(json.success).toBe(true);
+      expect(json.task.id).toBe('new-task-123');
+      expect(json.task.description).toBe('New manual task');
+      expect(json.task.fuzzy_deadline).toBe('today');
+    });
+
+    it('returns 400 bad request if description is empty or missing', async () => {
+      const mockReq = {
+        json: async () => ({
+          description: '',
+        }),
+      } as Request;
+
+      const response = await postTasksRoute(mockReq);
+      expect(response.status).toBe(400);
+
+      const json = await response.json();
+      expect(json.error).toContain('Missing or invalid description');
     });
   });
 

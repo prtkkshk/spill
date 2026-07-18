@@ -63,6 +63,33 @@ Each milestone closes only when its Definition of Done (see `project_plan.md`) p
 - [x] README notes the crowded space honestly and frames this as a portfolio/learning build — owner: PM
 - **DoD:** README covers problem, architecture, tradeoffs; demo clip linked; repo public and clean (no secrets, no dead scaffolding).
 
+## Milestone: Phase 9 — Text Quick-Add Input
+- [x] Add POST/insert endpoint to `/api/tasks` — owner: Backend
+- [x] Build glassmorphic text input field on main page — owner: Frontend
+- [x] Support optimistic append and list auto-refresh — owner: Frontend
+- **DoD:** Submitting text through the input field successfully creates a task in Supabase; it defaults to today/low-focus; page auto-refreshes to display it.
+
+## Milestone: Phase 10 — Inline Card Edit & Delete
+- [ ] Extend `/api/tasks` to support PATCH (description, fuzzy_deadline, energy_level) and DELETE (id) — owner: Backend
+- [ ] Add inline pencil/edit and trash/delete buttons on task cards — owner: Frontend
+- **DoD:** Tapping edit turns the card into an input, saving updates to the database; tapping delete removes the card with scaling/sliding transitions; all mutations are optimistic and smooth.
+
+## Milestone: Phase 11 — Dynamic Rollover (Overdue Section)
+- [ ] Update `GET /api/tasks` to classify old pending tasks as 'overdue' based on creation date and current date context — owner: Backend
+- [ ] Render a warning-styled "Overdue" section at the very top of the dashboard — owner: Frontend
+- **DoD:** Pending tasks created on past days are grouped into a dedicated "Overdue" section with distinct styling.
+
+## Milestone: Phase 12 — Collapsible Completed Tasks List & Undo
+- [ ] Update `GET /api/tasks` to return completed tasks from the last 24 hours — owner: Backend
+- [ ] Render collapsible "Completed Today" list at the bottom of the page — owner: Frontend
+- [ ] Support undoing task completion (PATCH back to pending) — owner: Frontend
+- **DoD:** Tapping complete moves task to Completed Today list; tapping it again restores it to pending in the DB and UI.
+
+## Milestone: Phase 13 — Share List via Web Share API
+- [ ] Add share button to header that compiles markdown formatted list — owner: Frontend
+- [ ] Invoke `navigator.share()` or fallback to clipboard copy — owner: Frontend
+- **DoD:** Tapping share outputs a clean markdown list of pending tasks to the mobile share menu or clipboard.
+
 ## Definition of Done (MVP, project-level)
 - A live URL, openable on a phone, that turns a real messy voice thought into a clean,
   correctly-categorized task list within a few seconds.

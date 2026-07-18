@@ -55,6 +55,44 @@ export async function GET() {
   }
 }
 
+// POST: create a task manually
+export async function POST(req: Request) {
+  try {
+    const { description, fuzzy_deadline, energy_level, context } = await req.json();
+
+    if (!description || typeof description !== 'string') {
+      return NextResponse.json({ error: 'Missing or invalid description' }, { status: 400 });
+    }
+
+    const supabase = getSupabaseService();
+
+    const { data, error } = await supabase
+      .from('tasks')
+      .insert({
+        description: description.trim(),
+        status: 'pending',
+        fuzzy_deadline: fuzzy_deadline || 'today',
+        energy_level: energy_level || 'low_focus',
+        context: context || null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Failed to create task manually:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      task: data,
+    });
+  } catch (error: any) {
+    console.error('Route error in POST /api/tasks:', error);
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+  }
+}
+
 // PATCH: mark a task as completed and set completed_at
 export async function PATCH(req: Request) {
   try {
