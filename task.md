@@ -4,11 +4,11 @@ Owners map to the personas in `AGENTS.md`. 🧑 = human-in-the-loop step an agen
 Each milestone closes only when its Definition of Done (see `project_plan.md`) passes.
 
 ## Milestone: Phase 0 — Accounts & Scaffold
-- [ ] 🧑 Create Google AI Studio account → generate Gemini API key — owner: Human
-- [ ] 🧑 Create Supabase project → note URL + anon key + service role key — owner: Human
-- [ ] 🧑 Create Vercel account, connect GitHub; create public GitHub repo — owner: Human
-- [ ] `npx create-next-app@latest` with Tailwind + TypeScript — owner: DevOps
-- [ ] `npm install @supabase/supabase-js`; create `.env.local`; confirm `.gitignore` ignores it in first commit — owner: DevOps
+- [x] 🧑 Create Google AI Studio account → generate Gemini API key — owner: Human
+- [x] 🧑 Create Supabase project → note URL + anon key + service role key — owner: Human
+- [x] 🧑 Create Vercel account, connect GitHub; create public GitHub repo — owner: Human
+- [x] `npx create-next-app@latest` with Tailwind + TypeScript — owner: DevOps
+- [x] `npm install @supabase/supabase-js`; create `.env.local`; confirm `.gitignore` ignores it in first commit — owner: DevOps
 - **DoD:** repo builds locally (`npm run dev`); `.env.local` git-ignored with all keys; first commit pushed with no secrets in history.
 
 ## Milestone: Phase 1 — Database & Backend Skeleton
