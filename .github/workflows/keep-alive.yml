@@ -1,0 +1,26 @@
+name: Supabase Keep-Alive
+
+on:
+  schedule:
+    # Run at 00:00 every 3 days
+    - cron: '0 0 */3 * *'
+  workflow_dispatch: # Allow manual triggers from GitHub UI
+
+jobs:
+  ping:
+    name: Ping Supabase Database
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Tasks Table API
+        run: |
+          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
+            "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}/rest/v1/tasks?limit=1")
+          
+          echo "Supabase response status: $STATUS_CODE"
+          if [ "$STATUS_CODE" -eq 200 ] || [ "$STATUS_CODE" -eq 204 ] || [ "$STATUS_CODE" -eq 400 ] || [ "$STATUS_CODE" -eq 404 ]; then
+            echo "Successfully connected to Supabase REST API (Code: $STATUS_CODE)."
+          else
+            echo "Unexpected response or connection error (Code: $STATUS_CODE)."
+            exit 1
+          fi

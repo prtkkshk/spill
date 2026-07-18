@@ -1,64 +1,148 @@
-import Image from "next/image";
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import Recorder from '@/components/Recorder';
+import TaskList from '@/components/TaskList';
+import { Task } from '@/lib/types';
 
 export default function Home() {
+  const [tasks, setTasks] = useState<{
+    today: Task[];
+    this_week: Task[];
+    anytime: Task[];
+  }>({
+    today: [],
+    this_week: [],
+    anytime: [],
+  });
+
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [refreshKey, setRefreshKey] = useState<number>(0);
+
+  // Fetch tasks from /api/tasks
+  const fetchTasks = async () => {
+    try {
+      const response = await fetch('/api/tasks');
+      if (!response.ok) {
+        throw new Error('Failed to fetch tasks');
+      }
+      const data = await response.json();
+      if (data.success) {
+        setTasks(data.tasks);
+      }
+    } catch (err) {
+      console.error('Error fetching tasks:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTasks();
+  }, [refreshKey]);
+
+  // Register Service Worker and Push Notifications
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('/sw.js')
+        .then((reg) => {
+          console.log('Service Worker registered with scope:', reg.scope);
+          // Dynamically import client push registration to avoid server-side build issues
+          import('@/lib/push-register').then(({ subscribeUserToPush }) => {
+            setTimeout(subscribeUserToPush, 1500);
+          });
+        })
+        .catch((err) => console.error('Service Worker registration failed:', err));
+    }
+  }, []);
+
+  // Document Title Badge Fallback
+  useEffect(() => {
+    const todayCount = tasks.today.length;
+    if (todayCount > 0) {
+      document.title = `(${todayCount}) FocusFlow`;
+    } else {
+      document.title = 'FocusFlow';
+    }
+  }, [tasks]);
+
+  const handleRefresh = () => {
+    setRefreshKey((prev) => prev + 1);
+  };
+
+  const handleRecordingComplete = (result: { success: boolean; recording: any; tasks: any[] }) => {
+    if (result.success) {
+      handleRefresh();
+    }
+  };
+
+  const totalPending = tasks.today.length + tasks.this_week.length + tasks.anytime.length;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 flex flex-col font-sans select-none pb-12">
+      {/* Header / Premium Glassmorphic Top Nav */}
+      <header className="sticky top-0 z-10 w-full bg-slate-950/80 backdrop-blur-md border-b border-slate-800/80 px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <span className="h-4 w-4 bg-indigo-500 rounded-full shadow-[0_0_10px_rgba(99,102,241,0.5)]" />
+          <h1 className="text-xl font-bold tracking-tight text-slate-100">FocusFlow</h1>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        
+        {/* Simple Badge Dashboard */}
+        <div className="flex items-center space-x-2">
+          {totalPending > 0 ? (
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-600/30 text-indigo-400 border border-indigo-500/20">
+              {totalPending} pending
+            </span>
+          ) : (
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-600/30 text-emerald-400 border border-emerald-500/20">
+              All Clear
+            </span>
+          )}
         </div>
+      </header>
+
+      {/* Main Layout container */}
+      <main className="flex-1 w-full max-w-md mx-auto flex flex-col items-center justify-start px-4 pt-8 space-y-8">
+        
+        {/* Quick Stats Panel */}
+        {totalPending > 0 && (
+          <div className="w-full bg-slate-900/40 border border-slate-800/50 rounded-2xl p-4 flex justify-between items-center text-center backdrop-blur-sm">
+            <div className="flex-1 border-r border-slate-800">
+              <span className="block text-2xl font-bold text-slate-100">{tasks.today.length}</span>
+              <span className="text-[10px] text-slate-400 uppercase font-semibold tracking-wider">Today</span>
+            </div>
+            <div className="flex-1 border-r border-slate-800">
+              <span className="block text-2xl font-bold text-slate-100">{tasks.this_week.length}</span>
+              <span className="text-[10px] text-slate-400 uppercase font-semibold tracking-wider">This Week</span>
+            </div>
+            <div className="flex-1">
+              <span className="block text-2xl font-bold text-slate-100">{tasks.anytime.length}</span>
+              <span className="text-[10px] text-slate-400 uppercase font-semibold tracking-wider">Anytime</span>
+            </div>
+          </div>
+        )}
+
+        {/* Voice Recorder Block (Phase 2) */}
+        <section className="w-full flex justify-center py-4">
+          <Recorder onRecordingComplete={handleRecordingComplete} />
+        </section>
+
+        {/* Divider / Section separator */}
+        <div className="w-full border-t border-slate-800/60" />
+
+        {/* Task List Block (Phase 3) */}
+        <section className="w-full flex-1">
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-12 space-y-3">
+              <div className="h-8 w-8 rounded-full border-4 border-t-indigo-500 border-indigo-500/20 animate-spin" />
+              <span className="text-xs text-slate-400">Loading your tasks...</span>
+            </div>
+          ) : (
+            <TaskList initialTasks={tasks} onRefreshNeeded={fetchTasks} />
+          )}
+        </section>
+
       </main>
     </div>
   );
