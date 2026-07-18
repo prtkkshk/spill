@@ -41,6 +41,18 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    const { data: completedTasks, error: completedError } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('status', 'completed')
+      .order('completed_at', { ascending: false })
+      .limit(10);
+
+    if (completedError) {
+      console.error('Failed to fetch completed tasks:', completedError);
+      return NextResponse.json({ error: completedError.message }, { status: 500 });
+    }
+
     const typedTasks = (tasks || []) as Task[];
 
     const grouped = {
@@ -49,6 +61,7 @@ export async function GET(req: Request) {
       this_week: [] as Task[],
       next_week: [] as Task[],
       anytime: [] as Task[],
+      completed: (completedTasks || []) as Task[],
     };
 
     typedTasks.forEach((task) => {

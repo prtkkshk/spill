@@ -80,9 +80,9 @@ Each milestone closes only when its Definition of Done (see `project_plan.md`) p
 - **DoD:** Pending tasks created on past days are grouped into a dedicated "Overdue" section with distinct styling.
 
 ## Milestone: Phase 12 — Collapsible Completed Tasks List & Undo
-- [ ] Update `GET /api/tasks` to return completed tasks from the last 24 hours — owner: Backend
-- [ ] Render collapsible "Completed Today" list at the bottom of the page — owner: Frontend
-- [ ] Support undoing task completion (PATCH back to pending) — owner: Frontend
+- [x] Query and return completed tasks (limited to 10) in GET `/api/tasks` — owner: Backend
+- [x] Add a collapsible "Recently Completed" list container at bottom of task feed — owner: Frontend
+- [x] Support undoing task completion (PATCH back to pending) — owner: Frontend
 - **DoD:** Tapping complete moves task to Completed Today list; tapping it again restores it to pending in the DB and UI.
 
 ## Milestone: Phase 13 — Share List via Web Share API

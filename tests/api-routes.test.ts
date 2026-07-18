@@ -50,7 +50,10 @@ describe('API Route Unit Tests', () => {
 
       mockSelect.mockReturnValue({
         eq: mockEq.mockReturnValue({
-          order: mockOrder.mockResolvedValue({ data: mockTasks, error: null }),
+          order: mockOrder.mockReturnValue({
+            limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+            then: (onfulfilled: any) => Promise.resolve({ data: mockTasks, error: null }).then(onfulfilled)
+          }),
         }),
       });
 
@@ -85,7 +88,10 @@ describe('API Route Unit Tests', () => {
 
       mockSelect.mockReturnValue({
         eq: mockEq.mockReturnValue({
-          order: mockOrder.mockResolvedValue({ data: mockTasks, error: null }),
+          order: mockOrder.mockReturnValue({
+            limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+            then: (onfulfilled: any) => Promise.resolve({ data: mockTasks, error: null }).then(onfulfilled)
+          }),
         }),
       });
 

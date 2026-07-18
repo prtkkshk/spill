@@ -33,12 +33,14 @@ export default function Home() {
     this_week: Task[];
     next_week: Task[];
     anytime: Task[];
+    completed: Task[];
   }>({
     overdue: [],
     today: [],
     this_week: [],
     next_week: [],
     anytime: [],
+    completed: [],
   });
 
   const [isLoading, setIsLoading] = useState<boolean>(true);

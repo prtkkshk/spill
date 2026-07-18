@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Task, FuzzyDeadline } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
 
-type GroupKey = 'overdue' | 'today' | 'this_week' | 'next_week' | 'anytime';
+type GroupKey = 'overdue' | 'today' | 'this_week' | 'next_week' | 'anytime' | 'completed';
 
 interface TaskListProps {
   initialTasks: {
@@ -13,6 +13,7 @@ interface TaskListProps {
     this_week: Task[];
     next_week: Task[];
     anytime: Task[];
+    completed: Task[];
   };
   onRefreshNeeded: () => void;
 }
@@ -32,6 +33,7 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
   const [editDesc, setEditDesc] = useState('');
   const [editDeadline, setEditDeadline] = useState<string>('');
   const [editEnergy, setEditEnergy] = useState<string>('');
+  const [isCompletedExpanded, setIsCompletedExpanded] = useState(false);
 
   const startEdit = (task: Task) => {
     setEditingId(task.id);
@@ -173,70 +175,144 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
   };
 
   const handleToggleComplete = async (taskId: string, currentGroup: GroupKey) => {
-    // 1. Optimistic Update: Remove task from local list immediately
-    const originalGroupList = localTasks[currentGroup];
-    const taskToComplete = originalGroupList.find((t) => t.id === taskId);
+    const originalGroupList = localTasks[currentGroup] || [];
+    const taskToToggle = originalGroupList.find((t) => t.id === taskId);
     
-    if (!taskToComplete) return;
+    if (!taskToToggle) return;
 
-    // Add to completing list for fade animation before removal
-    setCompletingIds((prev) => {
-      const next = new Set(prev);
-      next.add(taskId);
-      return next;
-    });
+    const isUndoing = currentGroup === 'completed';
 
-    // We wait 300ms for check animation/fade before removing from UI
-    setTimeout(async () => {
+    if (isUndoing) {
+      // Re-classify target group for pending placement
+      let targetGroup = taskToToggle.fuzzy_deadline as GroupKey;
+      if (targetGroup === 'today') {
+        const taskDate = new Date(taskToToggle.created_at);
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        if (taskDate < todayStart) {
+          targetGroup = 'overdue';
+        }
+      } else if (targetGroup === 'this_week') {
+        const taskDate = new Date(taskToToggle.created_at);
+        const currentWeekStart = new Date();
+        const day = currentWeekStart.getDay();
+        const diff = currentWeekStart.getDate() - day + (day === 0 ? -6 : 1);
+        currentWeekStart.setDate(diff);
+        currentWeekStart.setHours(0, 0, 0, 0);
+        if (taskDate < currentWeekStart) {
+          targetGroup = 'overdue';
+        }
+      }
+
+      const pendingTask = {
+        ...taskToToggle,
+        status: 'pending' as const,
+        completed_at: null,
+      };
+
+      // Optimistic UI Update: move from completed to targetGroup
       setLocalTasks((prev) => {
         return {
           ...prev,
-          [currentGroup]: prev[currentGroup].filter((t) => t.id !== taskId),
+          completed: prev.completed.filter((t) => t.id !== taskId),
+          [targetGroup]: [...(prev[targetGroup] || []), pendingTask].sort(
+            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          ),
         };
-      });
-      setCompletingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(taskId);
-        return next;
       });
 
       try {
-        // 2. Perform Network Call
         const response = await fetch('/api/tasks', {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ id: taskId }),
+          body: JSON.stringify({ id: taskId, status: 'pending' }),
         });
 
         if (!response.ok) {
-          throw new Error('Failed to update task on server');
+          throw new Error('Failed to revert task status on server');
         }
 
-        // Trigger a silent background refresh to sync with DB
         onRefreshNeeded();
       } catch (error) {
-        console.error('Failed to complete task, rolling back:', error);
-        
-        // 3. Rollback: Put task back in original place
+        console.error('Failed to undo task completion, rolling back:', error);
+
+        // Rollback
         setLocalTasks((prev) => {
-          // Check if already back (to avoid duplicates)
-          if (prev[currentGroup].some((t) => t.id === taskId)) return prev;
-          
-          const updatedList = [...prev[currentGroup], taskToComplete].sort(
-            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          );
-          
           return {
             ...prev,
-            [currentGroup]: updatedList,
+            [targetGroup]: (prev[targetGroup] || []).filter((t) => t.id !== taskId),
+            completed: [...prev.completed, taskToToggle].sort(
+              (a, b) => new Date(b.completed_at || '').getTime() - new Date(a.completed_at || '').getTime()
+            ),
           };
         });
 
-        alert('Failed to check off task. Connecting to database failed — rolled back.');
+        alert('Failed to undo task completion. Connection error.');
       }
-    }, 300);
+    } else {
+      // Mark complete flow
+      setCompletingIds((prev) => {
+        const next = new Set(prev);
+        next.add(taskId);
+        return next;
+      });
+
+      // Wait 300ms for animation
+      setTimeout(async () => {
+        const completedTask = {
+          ...taskToToggle,
+          status: 'completed' as const,
+          completed_at: new Date().toISOString(),
+        };
+
+        setLocalTasks((prev) => {
+          return {
+            ...prev,
+            [currentGroup]: prev[currentGroup].filter((t) => t.id !== taskId),
+            completed: [completedTask, ...(prev.completed || [])].slice(0, 10), // Limit to 10 recently completed
+          };
+        });
+
+        setCompletingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(taskId);
+          return next;
+        });
+
+        try {
+          const response = await fetch('/api/tasks', {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id: taskId, status: 'completed' }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to mark task completed on server');
+          }
+
+          onRefreshNeeded();
+        } catch (error) {
+          console.error('Failed to complete task, rolling back:', error);
+
+          // Rollback
+          setLocalTasks((prev) => {
+            return {
+              ...prev,
+              completed: (prev.completed || []).filter((t) => t.id !== taskId),
+              [currentGroup]: [...prev[currentGroup], taskToToggle].sort(
+                (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+              ),
+            };
+          });
+
+          alert('Failed to complete task. Connection error.');
+        }
+      }, 300);
+    }
   };
 
   const getEnergyBadge = (level: string) => {
@@ -476,6 +552,57 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
           {renderGroup('this_week', 'This Week', 'Plan to tackle by Sunday')}
           {renderGroup('next_week', 'Next Week', 'Tackle starting next Monday')}
           {renderGroup('anytime', 'Low-Energy / Anytime', 'Backlog, low focus, or when free')}
+        </div>
+      )}
+
+      {/* Collapsible Completed Section */}
+      {localTasks.completed && localTasks.completed.length > 0 && (
+        <div className="pt-6 border-t border-glass-border/30">
+          <button
+            onClick={() => setIsCompletedExpanded(!isCompletedExpanded)}
+            className="w-full flex items-center justify-between px-2 py-1.5 rounded-xl hover:bg-glass-surface/30 text-text-secondary hover:text-text-primary transition-all duration-300 font-extrabold text-xs uppercase tracking-wider cursor-pointer"
+          >
+            <span>Recently Completed ({localTasks.completed.length})</span>
+            <svg
+              className={`h-4 w-4 transition-transform duration-300 ${isCompletedExpanded ? 'rotate-180' : ''}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2.5}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {isCompletedExpanded && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mt-4 space-y-3"
+            >
+              {localTasks.completed.map((task) => (
+                <div
+                  key={task.id}
+                  className="flex items-center space-x-4 bg-glass-surface/20 border border-glass-border/10 rounded-2xl p-4 opacity-75 hover:opacity-100 transition-opacity"
+                >
+                  {/* Completed Checkbox -> clicking it toggles (undoes) completion */}
+                  <button
+                    onClick={() => handleToggleComplete(task.id, 'completed')}
+                    className="flex-shrink-0 h-6 w-6 rounded-full border-2 border-success bg-success/20 text-success flex items-center justify-center cursor-pointer"
+                    aria-label="Mark task pending"
+                  >
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </button>
+                  <span className="flex-1 text-sm text-text-secondary/80 line-through truncate">
+                    {task.description}
+                  </span>
+                </div>
+              ))}
+            </motion.div>
+          )}
         </div>
       )}
     </div>

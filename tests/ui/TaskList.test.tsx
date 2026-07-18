@@ -5,7 +5,7 @@ import TaskList from '@/components/TaskList';
 import { Task } from '@/lib/types';
 
 describe('TaskList Component Tests', () => {
-  const mockTasks: { overdue: Task[]; today: Task[]; this_week: Task[]; next_week: Task[]; anytime: Task[] } = {
+  const mockTasks: { overdue: Task[]; today: Task[]; this_week: Task[]; next_week: Task[]; anytime: Task[]; completed: Task[] } = {
     overdue: [],
     today: [
       {
@@ -67,6 +67,7 @@ describe('TaskList Component Tests', () => {
         completed_at: null,
       },
     ],
+    completed: [],
   };
 
   const mockOnRefreshNeeded = vi.fn();
@@ -97,7 +98,7 @@ describe('TaskList Component Tests', () => {
   });
 
   it('renders encouraging empty state when there are no tasks', () => {
-    const emptyTasks = { overdue: [], today: [], this_week: [], next_week: [], anytime: [] };
+    const emptyTasks = { overdue: [], today: [], this_week: [], next_week: [], anytime: [], completed: [] };
     render(<TaskList initialTasks={emptyTasks} onRefreshNeeded={mockOnRefreshNeeded} />);
 
     expect(screen.getByText("All clear, you're doing great!")).toBeInTheDocument();
@@ -208,6 +209,56 @@ describe('TaskList Component Tests', () => {
       expect(screen.queryByText('Read a book')).not.toBeInTheDocument();
       expect(global.fetch).toHaveBeenCalledWith('/api/tasks', expect.objectContaining({
         method: 'DELETE',
+      }));
+    });
+  });
+
+  it('renders completed tasks in collapsible completed list and handles undoing completion', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true }),
+    });
+
+    const mockTasksWithCompleted = {
+      ...mockTasks,
+      completed: [
+        {
+          id: 'completed-1',
+          description: 'A completed task description',
+          status: 'completed' as const,
+          fuzzy_deadline: 'today',
+          energy_level: 'low_focus',
+          context: 'home',
+          specific_deadline: null,
+          raw_transcript: 'some text',
+          recording_id: 'rec-1',
+          created_at: new Date().toISOString(),
+          completed_at: new Date().toISOString(),
+        },
+      ],
+    };
+
+    render(<TaskList initialTasks={mockTasksWithCompleted} onRefreshNeeded={mockOnRefreshNeeded} />);
+
+    // Completed section header should be visible
+    expect(screen.getByText(/Recently Completed \(1\)/i)).toBeInTheDocument();
+
+    // Click the toggle button to expand the completed list
+    const expandButton = screen.getByRole('button', { name: /Recently Completed/i });
+    fireEvent.click(expandButton);
+
+    // Completed task description should be visible
+    expect(screen.getByText('A completed task description')).toBeInTheDocument();
+
+    // Click the checked icon to undo completion
+    const undoButton = screen.getByRole('button', { name: 'Mark task pending' });
+    fireEvent.click(undoButton);
+
+    // Verify it moves to today/overdue locally and calls patch with status: pending
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/tasks', expect.objectContaining({
+        method: 'PATCH',
+        body: expect.stringContaining('"status":"pending"'),
       }));
     });
   });
