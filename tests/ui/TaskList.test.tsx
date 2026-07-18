@@ -73,6 +73,7 @@ describe('TaskList Component Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(window, 'alert').mockImplementation(() => {});
+    vi.spyOn(window, 'confirm').mockImplementation(() => true);
   });
 
   afterEach(() => {
@@ -152,5 +153,61 @@ describe('TaskList Component Tests', () => {
 
     expect(window.alert).toHaveBeenCalled();
     expect(mockOnRefreshNeeded).not.toHaveBeenCalled();
+  });
+
+  it('allows inline editing and patches update to server', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true }),
+    });
+
+    render(<TaskList initialTasks={mockTasks} onRefreshNeeded={mockOnRefreshNeeded} />);
+
+    // Click the edit button for first task (Read a book)
+    const editButtons = screen.getAllByRole('button', { name: 'Edit task' });
+    fireEvent.click(editButtons[0]);
+
+    // Check textarea is rendered with original value
+    const textarea = screen.getByPlaceholderText('Task description...');
+    expect(textarea).toHaveValue('Read a book');
+
+    // Change description text
+    fireEvent.change(textarea, { target: { value: 'Read a book updated' } });
+
+    // Click save button
+    const saveButton = screen.getByRole('button', { name: 'Save' });
+    fireEvent.click(saveButton);
+
+    // Verify it updates locally and sends network request
+    await waitFor(() => {
+      expect(screen.getByText('Read a book updated')).toBeInTheDocument();
+      expect(global.fetch).toHaveBeenCalledWith('/api/tasks', expect.objectContaining({
+        method: 'PATCH',
+      }));
+    });
+  });
+
+  it('allows deleting a task and sends delete request to server', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true }),
+    });
+
+    render(<TaskList initialTasks={mockTasks} onRefreshNeeded={mockOnRefreshNeeded} />);
+
+    // Click the delete button for first task (Read a book)
+    const deleteButtons = screen.getAllByRole('button', { name: 'Delete task' });
+    fireEvent.click(deleteButtons[0]);
+
+    // Verify window.confirm was called
+    expect(window.confirm).toHaveBeenCalled();
+
+    // Verify it is removed and delete was triggered
+    await waitFor(() => {
+      expect(screen.queryByText('Read a book')).not.toBeInTheDocument();
+      expect(global.fetch).toHaveBeenCalledWith('/api/tasks', expect.objectContaining({
+        method: 'DELETE',
+      }));
+    });
   });
 });

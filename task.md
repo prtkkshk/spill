@@ -70,8 +70,8 @@ Each milestone closes only when its Definition of Done (see `project_plan.md`) p
 - **DoD:** Submitting text through the input field successfully creates a task in Supabase; it defaults to today/low-focus; page auto-refreshes to display it.
 
 ## Milestone: Phase 10 — Inline Card Edit & Delete
-- [ ] Extend `/api/tasks` to support PATCH (description, fuzzy_deadline, energy_level) and DELETE (id) — owner: Backend
-- [ ] Add inline pencil/edit and trash/delete buttons on task cards — owner: Frontend
+- [x] Extend `/api/tasks` to support PATCH (description, fuzzy_deadline, energy_level) and DELETE (id) — owner: Backend
+- [x] Add inline pencil/edit and trash/delete buttons on task cards — owner: Frontend
 - **DoD:** Tapping edit turns the card into an input, saving updates to the database; tapping delete removes the card with scaling/sliding transitions; all mutations are optimistic and smooth.
 
 ## Milestone: Phase 11 — Dynamic Rollover (Overdue Section)

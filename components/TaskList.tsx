@@ -24,6 +24,151 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
     setLocalTasks(initialTasks);
   }, [initialTasks]);
 
+  // Inline Edit and Delete States
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDesc, setEditDesc] = useState('');
+  const [editDeadline, setEditDeadline] = useState<string>('');
+  const [editEnergy, setEditEnergy] = useState<string>('');
+
+  const startEdit = (task: Task) => {
+    setEditingId(task.id);
+    setEditDesc(task.description);
+    setEditDeadline(task.fuzzy_deadline);
+    setEditEnergy(task.energy_level);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+  };
+
+  const saveEdit = async (taskId: string, currentGroup: 'today' | 'this_week' | 'next_week' | 'anytime') => {
+    if (!editDesc.trim()) return;
+
+    const originalGroupList = localTasks[currentGroup];
+    const originalTask = originalGroupList.find((t) => t.id === taskId);
+    if (!originalTask) return;
+
+    const targetGroup = editDeadline as 'today' | 'this_week' | 'next_week' | 'anytime';
+
+    const updatedTask = {
+      ...originalTask,
+      description: editDesc.trim(),
+      fuzzy_deadline: editDeadline,
+      energy_level: editEnergy,
+    };
+
+    // Optimistic UI Update: move tasks if deadline group changes
+    setLocalTasks((prev) => {
+      if (currentGroup !== targetGroup) {
+        return {
+          ...prev,
+          [currentGroup]: prev[currentGroup].filter((t) => t.id !== taskId),
+          [targetGroup]: [...prev[targetGroup], updatedTask].sort(
+            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          ),
+        };
+      } else {
+        return {
+          ...prev,
+          [currentGroup]: prev[currentGroup].map((t) => (t.id === taskId ? updatedTask : t)),
+        };
+      }
+    });
+
+    setEditingId(null);
+
+    try {
+      const response = await fetch('/api/tasks', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: taskId,
+          description: editDesc.trim(),
+          fuzzy_deadline: editDeadline,
+          energy_level: editEnergy,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save task edits on server');
+      }
+
+      onRefreshNeeded();
+    } catch (error) {
+      console.error('Failed to save task edit, rolling back:', error);
+
+      // Rollback
+      setLocalTasks((prev) => {
+        if (currentGroup !== targetGroup) {
+          return {
+            ...prev,
+            [targetGroup]: prev[targetGroup].filter((t) => t.id !== taskId),
+            [currentGroup]: [...prev[currentGroup], originalTask].sort(
+              (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            ),
+          };
+        } else {
+          return {
+            ...prev,
+            [currentGroup]: prev[currentGroup].map((t) => (t.id === taskId ? originalTask : t)),
+          };
+        }
+      });
+
+      alert('Failed to save task edits. Connection error.');
+    }
+  };
+
+  const handleDelete = async (taskId: string, currentGroup: 'today' | 'this_week' | 'next_week' | 'anytime') => {
+    const originalGroupList = localTasks[currentGroup];
+    const taskToDelete = originalGroupList.find((t) => t.id === taskId);
+    if (!taskToDelete) return;
+
+    if (!confirm('Are you sure you want to delete this task?')) return;
+
+    // Optimistic UI Update
+    setLocalTasks((prev) => {
+      return {
+        ...prev,
+        [currentGroup]: prev[currentGroup].filter((t) => t.id !== taskId),
+      };
+    });
+
+    try {
+      const response = await fetch('/api/tasks', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id: taskId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete task on server');
+      }
+
+      onRefreshNeeded();
+    } catch (error) {
+      console.error('Failed to delete task, rolling back:', error);
+
+      // Rollback
+      setLocalTasks((prev) => {
+        if (prev[currentGroup].some((t) => t.id === taskId)) return prev;
+        const updatedList = [...prev[currentGroup], taskToDelete].sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        return {
+          ...prev,
+          [currentGroup]: updatedList,
+        };
+      });
+
+      alert('Failed to delete task. Connection error.');
+    }
+  };
+
   const handleToggleComplete = async (taskId: string, currentGroup: 'today' | 'this_week' | 'next_week' | 'anytime') => {
     // 1. Optimistic Update: Remove task from local list immediately
     const originalGroupList = localTasks[currentGroup];
@@ -126,6 +271,90 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
           <AnimatePresence mode="popLayout">
             {list.map((task) => {
               const isCompleting = completingIds.has(task.id);
+              const isEditing = editingId === task.id;
+
+              if (isEditing) {
+                return (
+                  <motion.div
+                    key={task.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ type: "spring", stiffness: 350, damping: 26 }}
+                    className="flex flex-col space-y-4 bg-glass-surface/85 border border-glass-border/40 rounded-2xl p-4 shadow-md backdrop-blur-md"
+                  >
+                    <textarea
+                      value={editDesc}
+                      onChange={(e) => setEditDesc(e.target.value)}
+                      className="w-full bg-glass-surface/50 border border-glass-border/30 rounded-xl p-2.5 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/30 min-h-[70px] resize-none font-bold"
+                      placeholder="Task description..."
+                    />
+
+                    {/* Deadline selector */}
+                    <div className="flex flex-col space-y-1 px-0.5">
+                      <span className="text-[9px] uppercase tracking-wider text-text-secondary font-extrabold">Fuzzy Deadline</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(['today', 'this_week', 'next_week', 'anytime'] as const).map((dl) => (
+                          <button
+                            key={dl}
+                            type="button"
+                            onClick={() => setEditDeadline(dl)}
+                            className={`px-2.5 py-1 rounded-lg text-[9px] font-extrabold uppercase tracking-wide transition cursor-pointer ${
+                              editDeadline === dl
+                                ? 'bg-accent text-white shadow-sm shadow-accent/20'
+                                : 'bg-glass-surface border border-glass-border/30 text-text-secondary hover:bg-accent/10'
+                            }`}
+                          >
+                            {dl.replace('_', ' ')}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Focus Level selector */}
+                    <div className="flex flex-col space-y-1 px-0.5">
+                      <span className="text-[9px] uppercase tracking-wider text-text-secondary font-extrabold">Energy Level</span>
+                      <div className="flex space-x-1.5">
+                        {(['high_focus', 'low_focus'] as const).map((ef) => (
+                          <button
+                            key={ef}
+                            type="button"
+                            onClick={() => setEditEnergy(ef)}
+                            className={`px-2.5 py-1 rounded-lg text-[9px] font-extrabold uppercase tracking-wide transition cursor-pointer ${
+                              editEnergy === ef
+                                ? ef === 'high_focus'
+                                  ? 'bg-focus-high text-white shadow-sm shadow-focus-high/20'
+                                  : 'bg-success text-white shadow-sm shadow-success/20'
+                                : 'bg-glass-surface border border-glass-border/30 text-text-secondary hover:bg-accent/10'
+                            }`}
+                          >
+                            {ef === 'high_focus' ? '⚡ High Focus' : '☕ Low Focus'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="flex space-x-2 pt-1 justify-end">
+                      <button
+                        onClick={cancelEdit}
+                        className="px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase bg-glass-surface border border-glass-border/40 text-text-primary hover:bg-accent/10 transition cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => saveEdit(task.id, groupKey)}
+                        disabled={!editDesc.trim()}
+                        className="px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase bg-accent text-white hover:bg-accent-strong disabled:opacity-30 disabled:scale-100 transition cursor-pointer"
+                      >
+                        Save
+                      </button>
+                    </div>
+                  </motion.div>
+                );
+              }
+
               return (
                 <motion.div
                   key={task.id}
@@ -162,9 +391,35 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
 
                   {/* Card Content */}
                   <div className="flex-1 space-y-2 min-w-0">
-                    <p className={`text-text-primary font-bold text-sm leading-relaxed break-words transition-colors duration-500 ${isCompleting ? 'line-through text-text-secondary/60' : ''}`}>
-                      {task.description}
-                    </p>
+                    <div className="flex items-start justify-between space-x-2">
+                      <p className={`text-text-primary font-bold text-sm leading-relaxed break-words transition-colors duration-500 ${isCompleting ? 'line-through text-text-secondary/60' : ''}`}>
+                        {task.description}
+                      </p>
+                      
+                      {/* Pencil and Trash icons */}
+                      {!isCompleting && (
+                        <div className="flex space-x-1 opacity-45 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0">
+                          <button
+                            onClick={() => startEdit(task)}
+                            className="p-1 rounded-lg text-text-secondary hover:text-accent hover:bg-accent/10 transition cursor-pointer"
+                            aria-label="Edit task"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleDelete(task.id, groupKey)}
+                            className="p-1 rounded-lg text-text-secondary hover:text-danger hover:bg-danger/10 transition cursor-pointer"
+                            aria-label="Delete task"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      )}
+                    </div>
                     
                     {/* Metadata and Context */}
                     <div className="flex flex-wrap gap-2 items-center">

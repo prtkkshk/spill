@@ -93,29 +93,46 @@ export async function POST(req: Request) {
   }
 }
 
-// PATCH: mark a task as completed and set completed_at
+// PATCH: update a task (complete, edit description, deadline, or energy level)
 export async function PATCH(req: Request) {
   try {
-    const { id } = await req.json();
+    const { id, description, fuzzy_deadline, energy_level, status } = await req.json();
 
     if (!id) {
       return NextResponse.json({ error: 'Missing task id' }, { status: 400 });
+    }
+
+    const updatePayload: any = {};
+
+    if (description !== undefined) updatePayload.description = description.trim();
+    if (fuzzy_deadline !== undefined) updatePayload.fuzzy_deadline = fuzzy_deadline;
+    if (energy_level !== undefined) updatePayload.energy_level = energy_level;
+    if (status !== undefined) {
+      updatePayload.status = status;
+      if (status === 'completed') {
+        updatePayload.completed_at = new Date().toISOString();
+      } else if (status === 'pending') {
+        updatePayload.completed_at = null;
+      }
+    }
+
+    // Default if only id is passed: mark as completed (legacy complete trigger compat)
+    if (Object.keys(updatePayload).length === 0) {
+      updatePayload.status = 'completed';
+      updatePayload.completed_at = new Date().toISOString();
     }
 
     const supabase = getSupabaseService();
 
     const { data, error } = await supabase
       .from('tasks')
-      .update({
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('id', id)
       .select()
       .single();
 
     if (error) {
-      console.error('Failed to complete task:', error);
+      console.error('Failed to update task:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -125,6 +142,36 @@ export async function PATCH(req: Request) {
     });
   } catch (error: any) {
     console.error('Route error in PATCH /api/tasks:', error);
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+// DELETE: remove a task permanently from the database
+export async function DELETE(req: Request) {
+  try {
+    const { id } = await req.json();
+
+    if (!id) {
+      return NextResponse.json({ error: 'Missing task id' }, { status: 400 });
+    }
+
+    const supabase = getSupabaseService();
+
+    const { error } = await supabase
+      .from('tasks')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Failed to delete task:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+    });
+  } catch (error: any) {
+    console.error('Route error in DELETE /api/tasks:', error);
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }
