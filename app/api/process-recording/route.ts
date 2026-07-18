@@ -7,6 +7,7 @@ export async function POST(req: Request) {
     const formData = await req.formData();
     const audioFile = formData.get('audio') as File | null;
     const durationStr = formData.get('duration') as string | null;
+    const clientTimeStr = formData.get('clientTime') as string | null;
     
     if (!audioFile) {
       return NextResponse.json({ error: 'Missing audio file in form data' }, { status: 400 });
@@ -22,7 +23,7 @@ export async function POST(req: Request) {
     // Call Gemini 3.5 Flash
     let parseResult;
     try {
-      parseResult = await parseAudioBrainDump(base64Data, mimeType);
+      parseResult = await parseAudioBrainDump(base64Data, mimeType, clientTimeStr || undefined);
     } catch (geminiError: any) {
       console.error('Gemini processing failed:', geminiError.message || geminiError);
       return NextResponse.json({ error: `Gemini parsing failed: ${geminiError.message}` }, { status: 502 });

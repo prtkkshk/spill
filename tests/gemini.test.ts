@@ -63,6 +63,40 @@ describe('Gemini Logic Unit Tests', () => {
     expect(result.tasks[1].energy_level).toBe('high_focus');
   });
 
+  it('correctly uses the provided clientTime in the system instruction date context', async () => {
+    const mockGeminiResponse = {
+      candidates: [
+        {
+          content: {
+            parts: [
+              {
+                text: JSON.stringify({
+                  transcript: 'Hello',
+                  tasks: [],
+                }),
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => mockGeminiResponse,
+    });
+
+    const testClientTime = '2026-07-19T12:00:00.000Z';
+    await parseAudioBrainDump('base64String', 'audio/webm', testClientTime);
+
+    expect(global.fetch).toHaveBeenCalled();
+    const fetchCallArg = (global.fetch as any).mock.calls[0][1];
+    const bodyObj = JSON.parse(fetchCallArg.body);
+    
+    expect(bodyObj.systemInstruction.parts[0].text).toContain('Current Date Context: Today is');
+    expect(bodyObj.systemInstruction.parts[0].text).toContain('July 19, 2026');
+  });
+
   it('normalizes invalid deadlines and energy levels to fallback defaults', async () => {
     const mockGeminiResponse = {
       candidates: [

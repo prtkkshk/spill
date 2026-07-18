@@ -144,6 +144,7 @@ export default function Recorder({ onRecordingComplete }: RecorderProps) {
       const formData = new FormData();
       formData.append('audio', audioBlob, `recording.${mimeType === 'audio/webm' ? 'webm' : 'mp4'}`);
       formData.append('duration', secondsElapsed.toString());
+      formData.append('clientTime', new Date().toString());
 
       setState('parsing');
       

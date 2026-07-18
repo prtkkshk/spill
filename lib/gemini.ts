@@ -1,6 +1,8 @@
 import { ParseResult } from './types';
 
-const SYSTEM_INSTRUCTION = `You are FocusFlow's parser. You receive a raw audio recording of a personal, unstructured brain-dump. Do two things: (1) transcribe the audio faithfully, (2) extract clear, actionable tasks from it.
+const getSystemInstruction = (dateContext: string) => `You are FocusFlow's parser. You receive a raw audio recording of a personal, unstructured brain-dump. Do two things: (1) transcribe the audio faithfully, (2) extract clear, actionable tasks from it.
+
+Current Date Context: Today is ${dateContext}. Use this reference date to resolve relative date expressions (like 'tomorrow', 'Friday', 'next week') to determine the correct 'fuzzy_deadline'.
 
 Rules:
 1. Each task description must start with a verb (e.g. 'Draft project pitch', not 'thinking about the pitch').
@@ -21,12 +23,52 @@ Rules:
   ]
 }`;
 
-export async function parseAudioBrainDump(base64Data: string, mimeType: string): Promise<ParseResult> {
+export async function parseAudioBrainDump(
+  base64Data: string,
+  mimeType: string,
+  clientTime?: string
+): Promise<ParseResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY environment variable is not set');
   }
 
+  // Resolve reference date context
+  let dateContext = '';
+  if (clientTime) {
+    try {
+      const parsedDate = new Date(clientTime);
+      if (!isNaN(parsedDate.getTime())) {
+        dateContext = parsedDate.toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        }) + ' at ' + parsedDate.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+        });
+      }
+    } catch (e) {
+      console.warn('Failed to parse clientTime:', clientTime, e);
+    }
+  }
+
+  // Fallback to server time if clientTime was missing or invalid
+  if (!dateContext) {
+    const now = new Date();
+    dateContext = now.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }) + ' at ' + now.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  }
   // Use Gemini 3.5 Flash
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
 
@@ -46,7 +88,7 @@ export async function parseAudioBrainDump(base64Data: string, mimeType: string):
     systemInstruction: {
       parts: [
         {
-          text: SYSTEM_INSTRUCTION,
+          text: getSystemInstruction(dateContext),
         },
       ],
     },
