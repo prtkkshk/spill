@@ -22,14 +22,14 @@ export default function ThemeToggle() {
   // Prevent hydration mismatch layout shifts by rendering a skeleton placeholder until mounted
   if (!mounted) {
     return (
-      <div className="w-9 h-9 rounded-xl bg-slate-800/30 border border-slate-700/50 animate-pulse" />
+      <div className="w-11 h-11 rounded-xl bg-slate-800/30 border border-slate-700/50 animate-pulse" />
     );
   }
 
   return (
     <button
       onClick={toggleTheme}
-      className="p-2 rounded-xl bg-glass-surface hover:bg-accent/10 border border-glass-border backdrop-blur-md text-text-primary hover:text-accent transition-all duration-300 shadow-sm flex items-center justify-center cursor-pointer"
+      className="h-11 w-11 rounded-xl bg-glass-surface hover:bg-accent/10 border border-glass-border backdrop-blur-md text-text-primary hover:text-accent transition-all duration-300 shadow-sm flex items-center justify-center cursor-pointer"
       aria-label="Toggle visual theme"
     >
       {theme === 'dark' ? (
