@@ -14,6 +14,7 @@ describe('TaskList Component Tests', () => {
         fuzzy_deadline: 'today',
         energy_level: 'low_focus',
         context: 'library',
+        specific_deadline: null,
         raw_transcript: 'some text',
         recording_id: 'rec-1',
         created_at: new Date().toISOString(),
@@ -28,6 +29,7 @@ describe('TaskList Component Tests', () => {
         fuzzy_deadline: 'this_week',
         energy_level: 'high_focus',
         context: 'VS Code',
+        specific_deadline: null,
         raw_transcript: 'some text',
         recording_id: 'rec-1',
         created_at: new Date().toISOString(),
@@ -42,6 +44,7 @@ describe('TaskList Component Tests', () => {
         fuzzy_deadline: 'next_week',
         energy_level: 'high_focus',
         context: 'slides',
+        specific_deadline: 'Tuesday, July 21',
         raw_transcript: 'some text',
         recording_id: 'rec-1',
         created_at: new Date().toISOString(),
@@ -56,6 +59,7 @@ describe('TaskList Component Tests', () => {
         fuzzy_deadline: 'backlog',
         energy_level: 'low_focus',
         context: 'kitchen',
+        specific_deadline: null,
         raw_transcript: 'some text',
         recording_id: 'rec-1',
         created_at: new Date().toISOString(),
@@ -87,6 +91,7 @@ describe('TaskList Component Tests', () => {
     expect(screen.getByText('Write code')).toBeInTheDocument();
     expect(screen.getByText('Prepare slides')).toBeInTheDocument();
     expect(screen.getByText('Wash dishes')).toBeInTheDocument();
+    expect(screen.getByText('🗓️ Tuesday, July 21')).toBeInTheDocument();
   });
 
   it('renders encouraging empty state when there are no tasks', () => {

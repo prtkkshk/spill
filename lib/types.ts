@@ -16,6 +16,7 @@ export interface Task {
   fuzzy_deadline: FuzzyDeadline;
   energy_level: EnergyLevel;
   context: string | null;
+  specific_deadline: string | null;
   raw_transcript: string | null;
   recording_id: string | null;
   created_at: string;
@@ -29,6 +30,7 @@ export interface ParseResult {
     fuzzy_deadline: FuzzyDeadline;
     energy_level: EnergyLevel;
     context?: string;
+    specific_deadline?: string;
   }>;
 }
 

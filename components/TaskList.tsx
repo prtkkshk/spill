@@ -155,6 +155,12 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
                   <div className="flex flex-wrap gap-2 items-center">
                     {getEnergyBadge(task.energy_level)}
                     
+                    {task.specific_deadline && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                        🗓️ {task.specific_deadline}
+                      </span>
+                    )}
+
                     {task.context && (
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-700 text-slate-300 truncate max-w-[200px]" title={task.context}>
                         🏷️ {task.context}

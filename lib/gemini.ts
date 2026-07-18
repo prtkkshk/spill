@@ -2,7 +2,7 @@ import { ParseResult } from './types';
 
 const getSystemInstruction = (dateContext: string) => `You are FocusFlow's parser. You receive a raw audio recording of a personal, unstructured brain-dump. Do two things: (1) transcribe the audio faithfully, (2) extract clear, actionable tasks from it.
 
-Current Date Context: Today is ${dateContext}. Use this reference date to resolve relative date expressions (like 'tomorrow', 'Friday', 'next week') to determine the correct 'fuzzy_deadline'.
+Current Date Context: Today is ${dateContext}. Use this reference date to resolve relative date expressions (like 'tomorrow', 'Friday', 'next week') to determine the correct 'fuzzy_deadline' and calculate the exact date and day.
 
 Rules:
 1. Each task description must start with a verb (e.g. 'Draft project pitch', not 'thinking about the pitch').
@@ -13,8 +13,9 @@ Rules:
    - 'backlog' / 'when_free': for future or non-urgent items.
 3. Infer energy_level as one of: high_focus (deep work, writing, coding), low_focus (quick errands, replies, calls).
 4. Extract any mentioned people, tools, or links into a 'context' field.
-5. Ignore filler words, false starts, and rambling asides that aren't tasks.
-6. Return ONLY valid JSON, no markdown fences, no commentary, in this exact shape:
+5. Extract the specific target completion date/day into a 'specific_deadline' field if mentioned. Express it in a user-friendly format (e.g., 'Tuesday, July 21' or 'Friday, July 24'). If no specific day/date is mentioned in the dump, leave it as an empty string.
+6. Ignore filler words, false starts, and rambling asides that aren't tasks.
+7. Return ONLY valid JSON, no markdown fences, no commentary, in this exact shape:
 {
   "transcript": string,
   "tasks": [
@@ -22,7 +23,8 @@ Rules:
       "description": string,
       "fuzzy_deadline": string,
       "energy_level": string,
-      "context": string
+      "context": string,
+      "specific_deadline": string
     }
   ]
 }`;
@@ -153,6 +155,7 @@ export async function parseAudioBrainDump(
         fuzzy_deadline: deadline,
         energy_level: energy,
         context: task.context || '',
+        specific_deadline: task.specific_deadline || '',
       };
     });
 

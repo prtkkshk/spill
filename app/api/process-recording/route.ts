@@ -57,6 +57,7 @@ export async function POST(req: Request) {
         fuzzy_deadline: task.fuzzy_deadline,
         energy_level: task.energy_level,
         context: task.context || null,
+        specific_deadline: task.specific_deadline || null,
         raw_transcript: parseResult.transcript,
         recording_id: recordingId,
       }));
