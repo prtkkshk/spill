@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     const base64Data = Buffer.from(arrayBuffer).toString('base64');
     const mimeType = audioFile.type || 'audio/webm'; // fallback if type is empty
 
-    // Call Gemini 2.5 Flash
+    // Call Gemini 3.5 Flash
     let parseResult;
     try {
       parseResult = await parseAudioBrainDump(base64Data, mimeType);

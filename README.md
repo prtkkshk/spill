@@ -24,7 +24,7 @@ This application is designed to run completely on free-tier infrastructure.
 |---|---|---|
 | **Frontend & API** | Next.js (App Router, TS, Tailwind CSS) | Scaffolds client components, layout viewports, and Route Handlers under a unified compiler. |
 | **Database** | Supabase (Postgres) | Free-tier relational storage suitable for single-user scale, with active-connection REST endpoints. |
-| **AI Processing** | Google Gemini 2.5 Flash | Accepts audio files natively (skipping a separate Whisper step). Performs transcription and structured JSON extraction in a single, fast API call. |
+| **AI Processing** | Google Gemini 3.5 Flash | Accepts audio files natively (skipping a separate Whisper step). Performs transcription and structured JSON extraction in a single, fast API call. |
 | **Reminders** | Web Push API (via `web-push` & VAPID keys) | Zero-cost native browser notifications scheduled via Vercel Cron. |
 | **App Shell** | Standard PWA (Manifest + Custom Service Worker) | Enables offline loading, high-contrast theme wrapping, and full-screen standalone mobile install. |
 
@@ -35,7 +35,7 @@ This application is designed to run completely on free-tier infrastructure.
        │
        │ (MediaRecorder captures audio/webm, or audio/mp4 fallback on iOS Safari)
        ▼
-[POST /api/process-recording] ──► [Gemini 2.5 Flash API]
+[POST /api/process-recording] ──► [Gemini 3.5 Flash API]
        │                                  │
        │ (Saves raw transcript)           │ (Transcribes + returns parsed JSON tasks)
        ▼                                  ▼
@@ -87,7 +87,7 @@ CREATE TABLE push_subscriptions (
 ## Non-Obvious Implementation Details & Tradeoffs
 
 1. **iOS Safari Audio MIME Mismatch:** iOS Safari does not support recording in `audio/webm`. We implement browser feature detection to record in `audio/webm` if supported, falling back to `audio/mp4` on Safari.
-2. **Excluding Whisper:** Instead of chain-loading transcription (Whisper API) followed by classification (Gemini/GPT API), we stream the raw audio binary directly to Gemini 2.5 Flash in a single payload. This halves API round-trip times and reduces point-of-failure vectors.
+2. **Excluding Whisper:** Instead of chain-loading transcription (Whisper API) followed by classification (Gemini/GPT API), we stream the raw audio binary directly to Gemini 3.5 Flash in a single payload. This halves API round-trip times and reduces point-of-failure vectors.
 3. **Optimistic Task Completion:** Tapping a task checkbox updates the local state immediately and triggers a background database update. If the network call fails, the UI rolls back with a visual notification.
 4. **Vercel Keep-Alive:** To prevent Supabase's free tier from auto-pausing after 7 days of inactivity, we deploy a lightweight GitHub Actions workflow (`keep-alive.yml`) that queries the public API endpoints every 3 days.
 5. **JSON Parsing Resilience:** LLMs can occasionally return invalid markdown blocks (e.g. ```json ... ```) even when `response_mime_type: "application/json"` is requested. We sanitize the output and wrap `JSON.parse` in a robust try-catch block, logging raw text on failures rather than throwing uncaught route exceptions.
