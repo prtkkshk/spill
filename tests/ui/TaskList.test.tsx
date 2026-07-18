@@ -5,7 +5,8 @@ import TaskList from '@/components/TaskList';
 import { Task } from '@/lib/types';
 
 describe('TaskList Component Tests', () => {
-  const mockTasks: { today: Task[]; this_week: Task[]; next_week: Task[]; anytime: Task[] } = {
+  const mockTasks: { overdue: Task[]; today: Task[]; this_week: Task[]; next_week: Task[]; anytime: Task[] } = {
+    overdue: [],
     today: [
       {
         id: 'task-1',
@@ -96,7 +97,7 @@ describe('TaskList Component Tests', () => {
   });
 
   it('renders encouraging empty state when there are no tasks', () => {
-    const emptyTasks = { today: [], this_week: [], next_week: [], anytime: [] };
+    const emptyTasks = { overdue: [], today: [], this_week: [], next_week: [], anytime: [] };
     render(<TaskList initialTasks={emptyTasks} onRefreshNeeded={mockOnRefreshNeeded} />);
 
     expect(screen.getByText("All clear, you're doing great!")).toBeInTheDocument();

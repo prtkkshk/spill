@@ -2,9 +2,32 @@ import { NextResponse } from 'next/server';
 import { getSupabaseService } from '@/lib/supabase';
 import { Task } from '@/lib/types';
 
-// GET: fetch all pending tasks grouped by Today, This Week, and Low-Energy/Anytime
-export async function GET() {
+// GET: fetch all pending tasks grouped by Overdue, Today, This Week, and Anytime
+export async function GET(req: Request) {
   try {
+    const { searchParams } = new URL(req.url);
+    const clientTime = searchParams.get('clientTime');
+
+    // Resolve date boundary context
+    let todayBoundary = new Date();
+    if (clientTime) {
+      const parsed = new Date(clientTime);
+      if (!isNaN(parsed.getTime())) {
+        todayBoundary = parsed;
+      }
+    }
+    
+    // Start of client local day
+    const todayStart = new Date(todayBoundary);
+    todayStart.setHours(0, 0, 0, 0);
+
+    // Monday week boundary for this week tasks
+    const currentWeekStart = new Date(todayStart);
+    const day = todayStart.getDay(); // 0 Sunday, 1 Monday, etc.
+    const diff = todayStart.getDate() - day + (day === 0 ? -6 : 1);
+    currentWeekStart.setDate(diff);
+    currentWeekStart.setHours(0, 0, 0, 0);
+
     const supabase = getSupabaseService();
 
     const { data: tasks, error } = await supabase
@@ -20,12 +43,8 @@ export async function GET() {
 
     const typedTasks = (tasks || []) as Task[];
 
-    // Grouping logic:
-    // 1. Today: fuzzy_deadline === 'today'
-    // 2. This Week: fuzzy_deadline === 'this_week'
-    // 3. Low-Energy / Anytime: fuzzy_deadline is backlog/when_free OR energy_level is low_focus
-    // (To keep groups mutually exclusive: if it's today, it goes to today. If it's this week, it goes to this week. Otherwise, it goes to anytime/low-energy).
     const grouped = {
+      overdue: [] as Task[],
       today: [] as Task[],
       this_week: [] as Task[],
       next_week: [] as Task[],
@@ -33,10 +52,20 @@ export async function GET() {
     };
 
     typedTasks.forEach((task) => {
+      const taskDate = new Date(task.created_at);
+
       if (task.fuzzy_deadline === 'today') {
-        grouped.today.push(task);
+        if (taskDate < todayStart) {
+          grouped.overdue.push(task);
+        } else {
+          grouped.today.push(task);
+        }
       } else if (task.fuzzy_deadline === 'this_week') {
-        grouped.this_week.push(task);
+        if (taskDate < currentWeekStart) {
+          grouped.overdue.push(task);
+        } else {
+          grouped.this_week.push(task);
+        }
       } else if (task.fuzzy_deadline === 'next_week') {
         grouped.next_week.push(task);
       } else {
@@ -47,7 +76,7 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       tasks: grouped,
-      rawTasks: typedTasks, // Keep raw list in case frontend wants it
+      rawTasks: typedTasks,
     });
   } catch (error: any) {
     console.error('Route error in GET /api/tasks:', error);
@@ -105,7 +134,10 @@ export async function PATCH(req: Request) {
     const updatePayload: any = {};
 
     if (description !== undefined) updatePayload.description = description.trim();
-    if (fuzzy_deadline !== undefined) updatePayload.fuzzy_deadline = fuzzy_deadline;
+    if (fuzzy_deadline !== undefined) {
+      updatePayload.fuzzy_deadline = fuzzy_deadline;
+      updatePayload.created_at = new Date().toISOString();
+    }
     if (energy_level !== undefined) updatePayload.energy_level = energy_level;
     if (status !== undefined) {
       updatePayload.status = status;

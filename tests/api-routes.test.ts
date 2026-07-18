@@ -37,11 +37,15 @@ describe('API Route Unit Tests', () => {
 
   describe('GET /api/tasks', () => {
     it('correctly fetches pending tasks and groups them by deadline', async () => {
+      const mockReq = {
+        url: 'http://localhost/api/tasks?clientTime=' + new Date().toISOString(),
+      } as Request;
+
       const mockTasks = [
-        { id: '1', description: 'Task 1', fuzzy_deadline: 'today', status: 'pending' },
-        { id: '2', description: 'Task 2', fuzzy_deadline: 'this_week', status: 'pending' },
-        { id: 'next', description: 'Task Next', fuzzy_deadline: 'next_week', status: 'pending' },
-        { id: '3', description: 'Task 3', fuzzy_deadline: 'backlog', status: 'pending' },
+        { id: '1', description: 'Task 1', fuzzy_deadline: 'today', status: 'pending', created_at: new Date().toISOString() },
+        { id: '2', description: 'Task 2', fuzzy_deadline: 'this_week', status: 'pending', created_at: new Date().toISOString() },
+        { id: 'next', description: 'Task Next', fuzzy_deadline: 'next_week', status: 'pending', created_at: new Date().toISOString() },
+        { id: '3', description: 'Task 3', fuzzy_deadline: 'backlog', status: 'pending', created_at: new Date().toISOString() },
       ];
 
       mockSelect.mockReturnValue({
@@ -50,11 +54,12 @@ describe('API Route Unit Tests', () => {
         }),
       });
 
-      const response = await getTasksRoute();
+      const response = await getTasksRoute(mockReq);
       expect(response.status).toBe(200);
 
       const json = await response.json();
       expect(json.success).toBe(true);
+      expect(json.tasks.overdue).toHaveLength(0);
       expect(json.tasks.today).toHaveLength(1);
       expect(json.tasks.this_week).toHaveLength(1);
       expect(json.tasks.next_week).toHaveLength(1);
@@ -63,6 +68,34 @@ describe('API Route Unit Tests', () => {
       expect(json.tasks.this_week[0].id).toBe('2');
       expect(json.tasks.next_week[0].id).toBe('next');
       expect(json.tasks.anytime[0].id).toBe('3');
+    });
+
+    it('correctly classifies old tasks as overdue', async () => {
+      // Set today to Sunday July 19th, 2026
+      const clientTimeStr = '2026-07-19T12:00:00Z';
+      const mockReq = {
+        url: 'http://localhost/api/tasks?clientTime=' + encodeURIComponent(clientTimeStr),
+      } as Request;
+
+      const mockTasks = [
+        { id: '1', description: 'Task 1', fuzzy_deadline: 'today', status: 'pending', created_at: '2026-07-18T10:00:00Z' },
+        { id: '2', description: 'Task 2', fuzzy_deadline: 'this_week', status: 'pending', created_at: '2026-07-10T10:00:00Z' },
+        { id: '3', description: 'Task 3', fuzzy_deadline: 'today', status: 'pending', created_at: '2026-07-19T08:00:00Z' },
+      ];
+
+      mockSelect.mockReturnValue({
+        eq: mockEq.mockReturnValue({
+          order: mockOrder.mockResolvedValue({ data: mockTasks, error: null }),
+        }),
+      });
+
+      const response = await getTasksRoute(mockReq);
+      expect(response.status).toBe(200);
+
+      const json = await response.json();
+      expect(json.success).toBe(true);
+      expect(json.tasks.overdue).toHaveLength(2); // Task 1 (today but yesterday) and Task 2 (this_week but last week)
+      expect(json.tasks.today).toHaveLength(1); // Task 3 (today and today)
     });
   });
 

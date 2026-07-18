@@ -95,7 +95,7 @@ async function testFetchAndPatch(mockData: any) {
   
   // Test GET route
   const getReq = new Request('http://localhost:3000/api/tasks');
-  const getRes = await getTasksRoute();
+  const getRes = await getTasksRoute(getReq);
   const getJson = await getRes.json();
   
   console.log('GET response success status:', getRes.ok);

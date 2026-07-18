@@ -28,11 +28,13 @@ const itemVariants = {
 
 export default function Home() {
   const [tasks, setTasks] = useState<{
+    overdue: Task[];
     today: Task[];
     this_week: Task[];
     next_week: Task[];
     anytime: Task[];
   }>({
+    overdue: [],
     today: [],
     this_week: [],
     next_week: [],
@@ -77,7 +79,8 @@ export default function Home() {
   // Fetch tasks from /api/tasks
   const fetchTasks = async () => {
     try {
-      const response = await fetch('/api/tasks');
+      const clientTimeParam = encodeURIComponent(new Date().toString());
+      const response = await fetch(`/api/tasks?clientTime=${clientTimeParam}`);
       if (!response.ok) {
         throw new Error('Failed to fetch tasks');
       }
@@ -167,7 +170,7 @@ export default function Home() {
     }
   };
 
-  const totalPending = tasks.today.length + tasks.this_week.length + tasks.next_week.length + tasks.anytime.length;
+  const totalPending = tasks.overdue.length + tasks.today.length + tasks.this_week.length + tasks.next_week.length + tasks.anytime.length;
 
   return (
     <div className="min-h-screen bg-bg-base text-text-primary flex flex-col font-sans select-none pb-12 relative overflow-hidden transition-colors duration-500">
@@ -234,7 +237,7 @@ export default function Home() {
               className="bg-glass-surface/60 border border-glass-border/30 rounded-2xl p-3 flex flex-col items-center justify-center backdrop-blur-md shadow-sm transition-all duration-300 border-t-2 border-t-danger/70 hover:bg-glass-surface/85 cursor-default"
             >
               <span className="text-2xl font-extrabold tracking-tight text-text-primary tabular-nums transition-colors duration-500">
-                {tasks.today.length}
+                {tasks.today.length + tasks.overdue.length}
               </span>
               <span className="text-[9px] text-text-secondary uppercase font-extrabold tracking-wider mt-1 transition-colors duration-500">
                 Today

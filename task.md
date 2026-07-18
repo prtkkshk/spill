@@ -75,8 +75,8 @@ Each milestone closes only when its Definition of Done (see `project_plan.md`) p
 - **DoD:** Tapping edit turns the card into an input, saving updates to the database; tapping delete removes the card with scaling/sliding transitions; all mutations are optimistic and smooth.
 
 ## Milestone: Phase 11 — Dynamic Rollover (Overdue Section)
-- [ ] Update `GET /api/tasks` to classify old pending tasks as 'overdue' based on creation date and current date context — owner: Backend
-- [ ] Render a warning-styled "Overdue" section at the very top of the dashboard — owner: Frontend
+- [x] Calculate relative "Overdue Today" group on GET `/api/tasks` using current date — owner: Backend
+- [x] Render a red-tint alert banner section for overdue tasks at the top of list — owner: Frontend
 - **DoD:** Pending tasks created on past days are grouped into a dedicated "Overdue" section with distinct styling.
 
 ## Milestone: Phase 12 — Collapsible Completed Tasks List & Undo

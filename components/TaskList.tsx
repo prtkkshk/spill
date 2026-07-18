@@ -4,8 +4,11 @@ import React, { useState, useEffect } from 'react';
 import { Task, FuzzyDeadline } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
 
+type GroupKey = 'overdue' | 'today' | 'this_week' | 'next_week' | 'anytime';
+
 interface TaskListProps {
   initialTasks: {
+    overdue: Task[];
     today: Task[];
     this_week: Task[];
     next_week: Task[];
@@ -41,14 +44,14 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
     setEditingId(null);
   };
 
-  const saveEdit = async (taskId: string, currentGroup: 'today' | 'this_week' | 'next_week' | 'anytime') => {
+  const saveEdit = async (taskId: string, currentGroup: GroupKey) => {
     if (!editDesc.trim()) return;
 
     const originalGroupList = localTasks[currentGroup];
     const originalTask = originalGroupList.find((t) => t.id === taskId);
     if (!originalTask) return;
 
-    const targetGroup = editDeadline as 'today' | 'this_week' | 'next_week' | 'anytime';
+    const targetGroup = editDeadline as GroupKey;
 
     const updatedTask = {
       ...originalTask,
@@ -121,7 +124,7 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
     }
   };
 
-  const handleDelete = async (taskId: string, currentGroup: 'today' | 'this_week' | 'next_week' | 'anytime') => {
+  const handleDelete = async (taskId: string, currentGroup: GroupKey) => {
     const originalGroupList = localTasks[currentGroup];
     const taskToDelete = originalGroupList.find((t) => t.id === taskId);
     if (!taskToDelete) return;
@@ -169,7 +172,7 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
     }
   };
 
-  const handleToggleComplete = async (taskId: string, currentGroup: 'today' | 'this_week' | 'next_week' | 'anytime') => {
+  const handleToggleComplete = async (taskId: string, currentGroup: GroupKey) => {
     // 1. Optimistic Update: Remove task from local list immediately
     const originalGroupList = localTasks[currentGroup];
     const taskToComplete = originalGroupList.find((t) => t.id === taskId);
@@ -252,19 +255,24 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
   };
 
   const hasTasks =
+    (localTasks.overdue?.length || 0) > 0 ||
     localTasks.today.length > 0 ||
     localTasks.this_week.length > 0 ||
     localTasks.next_week.length > 0 ||
     localTasks.anytime.length > 0;
 
-  const renderGroup = (groupKey: 'today' | 'this_week' | 'next_week' | 'anytime', title: string, subtitle: string) => {
-    const list = localTasks[groupKey];
+  const renderGroup = (groupKey: GroupKey, title: string, subtitle: string) => {
+    const list = localTasks[groupKey] || [];
     if (list.length === 0) return null;
+
+    const isOverdue = groupKey === 'overdue';
 
     return (
       <div className="space-y-4">
         <div className="flex flex-col px-1">
-          <h3 className="text-xs font-extrabold text-text-secondary uppercase tracking-widest transition-colors duration-500">{title}</h3>
+          <h3 className={`text-xs font-extrabold uppercase tracking-widest transition-colors duration-500 ${
+            isOverdue ? 'text-danger animate-pulse' : 'text-text-secondary'
+          }`}>{title}</h3>
           <span className="text-[10px] text-text-secondary/70 transition-colors duration-500">{subtitle}</span>
         </div>
         <div className="space-y-3 relative">
@@ -363,7 +371,11 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, x: 20 }}
                   transition={{ type: "spring", stiffness: 350, damping: 26 }}
-                  className={`flex items-start space-x-4 bg-glass-surface/50 border border-glass-border/30 rounded-2xl p-4 shadow-sm hover:shadow-md backdrop-blur-md transition-all duration-300 hover:bg-glass-surface/80 hover:border-glass-border/50 group select-none ${
+                  className={`flex items-start space-x-4 border rounded-2xl p-4 shadow-sm hover:shadow-md backdrop-blur-md transition-all duration-300 hover:bg-glass-surface/80 group select-none ${
+                    isOverdue 
+                      ? 'bg-danger/5 border-danger/25 hover:border-danger/45' 
+                      : 'bg-glass-surface/50 border-glass-border/30 hover:border-glass-border/50'
+                  } ${
                     isCompleting ? 'opacity-35 scale-95 translate-x-2' : ''
                   }`}
                 >
@@ -459,6 +471,7 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
         </div>
       ) : (
         <div className="space-y-10">
+          {renderGroup('overdue', 'Overdue Today', 'Pending tasks from prior days')}
           {renderGroup('today', 'Today', 'Crucial focus for today')}
           {renderGroup('this_week', 'This Week', 'Plan to tackle by Sunday')}
           {renderGroup('next_week', 'Next Week', 'Tackle starting next Monday')}
