@@ -7,6 +7,7 @@ interface TaskListProps {
   initialTasks: {
     today: Task[];
     this_week: Task[];
+    next_week: Task[];
     anytime: Task[];
   };
   onRefreshNeeded: () => void;
@@ -22,7 +23,7 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
     setLocalTasks(initialTasks);
   }, [initialTasks]);
 
-  const handleToggleComplete = async (taskId: string, currentGroup: 'today' | 'this_week' | 'anytime') => {
+  const handleToggleComplete = async (taskId: string, currentGroup: 'today' | 'this_week' | 'next_week' | 'anytime') => {
     // 1. Optimistic Update: Remove task from local list immediately
     const originalGroupList = localTasks[currentGroup];
     const taskToComplete = originalGroupList.find((t) => t.id === taskId);
@@ -107,9 +108,10 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
   const hasTasks =
     localTasks.today.length > 0 ||
     localTasks.this_week.length > 0 ||
+    localTasks.next_week.length > 0 ||
     localTasks.anytime.length > 0;
 
-  const renderGroup = (groupKey: 'today' | 'this_week' | 'anytime', title: string, subtitle: string) => {
+  const renderGroup = (groupKey: 'today' | 'this_week' | 'next_week' | 'anytime', title: string, subtitle: string) => {
     const list = localTasks[groupKey];
     if (list.length === 0) return null;
 
@@ -182,6 +184,7 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
         <div className="space-y-8">
           {renderGroup('today', 'Today', 'Crucial focus for today')}
           {renderGroup('this_week', 'This Week', 'Plan to tackle by Sunday')}
+          {renderGroup('next_week', 'Next Week', 'Tackle starting next Monday')}
           {renderGroup('anytime', 'Low-Energy / Anytime', 'Backlog, low focus, or when free')}
         </div>
       )}

@@ -40,6 +40,7 @@ describe('API Route Unit Tests', () => {
       const mockTasks = [
         { id: '1', description: 'Task 1', fuzzy_deadline: 'today', status: 'pending' },
         { id: '2', description: 'Task 2', fuzzy_deadline: 'this_week', status: 'pending' },
+        { id: 'next', description: 'Task Next', fuzzy_deadline: 'next_week', status: 'pending' },
         { id: '3', description: 'Task 3', fuzzy_deadline: 'backlog', status: 'pending' },
       ];
 
@@ -56,9 +57,11 @@ describe('API Route Unit Tests', () => {
       expect(json.success).toBe(true);
       expect(json.tasks.today).toHaveLength(1);
       expect(json.tasks.this_week).toHaveLength(1);
+      expect(json.tasks.next_week).toHaveLength(1);
       expect(json.tasks.anytime).toHaveLength(1);
       expect(json.tasks.today[0].id).toBe('1');
       expect(json.tasks.this_week[0].id).toBe('2');
+      expect(json.tasks.next_week[0].id).toBe('next');
       expect(json.tasks.anytime[0].id).toBe('3');
     });
   });

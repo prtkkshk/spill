@@ -9,15 +9,39 @@ export default function Home() {
   const [tasks, setTasks] = useState<{
     today: Task[];
     this_week: Task[];
+    next_week: Task[];
     anytime: Task[];
   }>({
     today: [],
     this_week: [],
+    next_week: [],
     anytime: [],
   });
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [refreshKey, setRefreshKey] = useState<number>(0);
+  const [currentDateText, setCurrentDateText] = useState<string>('');
+
+  // Live Clock Display
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const text = now.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      }) + ' • ' + now.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      });
+      setCurrentDateText(text);
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 1000 * 30); // Update every 30 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   // Fetch tasks from /api/tasks
   const fetchTasks = async () => {
@@ -77,7 +101,7 @@ export default function Home() {
     }
   };
 
-  const totalPending = tasks.today.length + tasks.this_week.length + tasks.anytime.length;
+  const totalPending = tasks.today.length + tasks.this_week.length + tasks.next_week.length + tasks.anytime.length;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 flex flex-col font-sans select-none pb-12">
@@ -105,6 +129,13 @@ export default function Home() {
       {/* Main Layout container */}
       <main className="flex-1 w-full max-w-md mx-auto flex flex-col items-center justify-start px-4 pt-8 space-y-8">
         
+        {/* Live Date/Time Display */}
+        <div className="w-full text-center py-2.5 px-4 bg-slate-900/40 border border-slate-800/40 rounded-xl backdrop-blur-sm">
+          <span className="text-xs font-semibold text-indigo-300 tracking-wider">
+            🗓️ {currentDateText || 'Loading current time...'}
+          </span>
+        </div>
+
         {/* Quick Stats Panel */}
         {totalPending > 0 && (
           <div className="w-full bg-slate-900/40 border border-slate-800/50 rounded-2xl p-4 flex justify-between items-center text-center backdrop-blur-sm">
@@ -115,6 +146,10 @@ export default function Home() {
             <div className="flex-1 border-r border-slate-800">
               <span className="block text-2xl font-bold text-slate-100">{tasks.this_week.length}</span>
               <span className="text-[10px] text-slate-400 uppercase font-semibold tracking-wider">This Week</span>
+            </div>
+            <div className="flex-1 border-r border-slate-800">
+              <span className="block text-2xl font-bold text-slate-100">{tasks.next_week.length}</span>
+              <span className="text-[10px] text-slate-400 uppercase font-semibold tracking-wider">Next Week</span>
             </div>
             <div className="flex-1">
               <span className="block text-2xl font-bold text-slate-100">{tasks.anytime.length}</span>

@@ -6,7 +6,7 @@ export interface Recording {
 }
 
 export type TaskStatus = 'pending' | 'completed' | 'snoozed';
-export type FuzzyDeadline = 'today' | 'this_week' | 'backlog' | 'when_free';
+export type FuzzyDeadline = 'today' | 'this_week' | 'next_week' | 'backlog' | 'when_free';
 export type EnergyLevel = 'high_focus' | 'low_focus';
 
 export interface Task {

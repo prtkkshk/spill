@@ -28,6 +28,7 @@ export async function GET() {
     const grouped = {
       today: [] as Task[],
       this_week: [] as Task[],
+      next_week: [] as Task[],
       anytime: [] as Task[],
     };
 
@@ -36,6 +37,8 @@ export async function GET() {
         grouped.today.push(task);
       } else if (task.fuzzy_deadline === 'this_week') {
         grouped.this_week.push(task);
+      } else if (task.fuzzy_deadline === 'next_week') {
+        grouped.next_week.push(task);
       } else {
         grouped.anytime.push(task);
       }

@@ -6,7 +6,11 @@ Current Date Context: Today is ${dateContext}. Use this reference date to resolv
 
 Rules:
 1. Each task description must start with a verb (e.g. 'Draft project pitch', not 'thinking about the pitch').
-2. Infer fuzzy_deadline as one of: today, this_week, backlog, when_free.
+2. Infer fuzzy_deadline as one of: today, this_week, next_week, backlog, when_free.
+   - 'today': due today or tomorrow.
+   - 'this_week': due by the end of the current calendar week (Sunday).
+   - 'next_week': due in the following calendar week (starting next Monday through Sunday). For example, if today is Sunday, a task for "Tuesday" belongs to 'next_week'.
+   - 'backlog' / 'when_free': for future or non-urgent items.
 3. Infer energy_level as one of: high_focus (deep work, writing, coding), low_focus (quick errands, replies, calls).
 4. Extract any mentioned people, tools, or links into a 'context' field.
 5. Ignore filler words, false starts, and rambling asides that aren't tasks.
@@ -134,7 +138,7 @@ export async function parseAudioBrainDump(
     parsed.tasks = parsed.tasks.map((task) => {
       // Validate deadline
       let deadline = task.fuzzy_deadline;
-      if (!['today', 'this_week', 'backlog', 'when_free'].includes(deadline)) {
+      if (!['today', 'this_week', 'next_week', 'backlog', 'when_free'].includes(deadline)) {
         deadline = 'this_week';
       }
       

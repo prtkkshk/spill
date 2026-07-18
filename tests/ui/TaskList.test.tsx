@@ -5,7 +5,7 @@ import TaskList from '@/components/TaskList';
 import { Task } from '@/lib/types';
 
 describe('TaskList Component Tests', () => {
-  const mockTasks: { today: Task[]; this_week: Task[]; anytime: Task[] } = {
+  const mockTasks: { today: Task[]; this_week: Task[]; next_week: Task[]; anytime: Task[] } = {
     today: [
       {
         id: 'task-1',
@@ -28,6 +28,20 @@ describe('TaskList Component Tests', () => {
         fuzzy_deadline: 'this_week',
         energy_level: 'high_focus',
         context: 'VS Code',
+        raw_transcript: 'some text',
+        recording_id: 'rec-1',
+        created_at: new Date().toISOString(),
+        completed_at: null,
+      },
+    ],
+    next_week: [
+      {
+        id: 'task-next',
+        description: 'Prepare slides',
+        status: 'pending',
+        fuzzy_deadline: 'next_week',
+        energy_level: 'high_focus',
+        context: 'slides',
         raw_transcript: 'some text',
         recording_id: 'rec-1',
         created_at: new Date().toISOString(),
@@ -66,15 +80,17 @@ describe('TaskList Component Tests', () => {
 
     expect(screen.getByText('Today')).toBeInTheDocument();
     expect(screen.getByText('This Week')).toBeInTheDocument();
+    expect(screen.getByText('Next Week')).toBeInTheDocument();
     expect(screen.getByText('Low-Energy / Anytime')).toBeInTheDocument();
 
     expect(screen.getByText('Read a book')).toBeInTheDocument();
     expect(screen.getByText('Write code')).toBeInTheDocument();
+    expect(screen.getByText('Prepare slides')).toBeInTheDocument();
     expect(screen.getByText('Wash dishes')).toBeInTheDocument();
   });
 
   it('renders encouraging empty state when there are no tasks', () => {
-    const emptyTasks = { today: [], this_week: [], anytime: [] };
+    const emptyTasks = { today: [], this_week: [], next_week: [], anytime: [] };
     render(<TaskList initialTasks={emptyTasks} onRefreshNeeded={mockOnRefreshNeeded} />);
 
     expect(screen.getByText('No pending tasks!')).toBeInTheDocument();
