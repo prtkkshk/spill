@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Recorder from '@/components/Recorder';
 import TaskList from '@/components/TaskList';
+import ThemeToggle from '@/components/ThemeToggle';
 import { Task } from '@/lib/types';
 
 export default function Home() {
@@ -112,8 +113,9 @@ export default function Home() {
           <h1 className="text-xl font-bold tracking-tight text-slate-100">FocusFlow</h1>
         </div>
         
-        {/* Simple Badge Dashboard */}
-        <div className="flex items-center space-x-2">
+        {/* Simple Badge Dashboard with Theme Toggle */}
+        <div className="flex items-center space-x-3">
+          <ThemeToggle />
           {totalPending > 0 ? (
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-600/30 text-indigo-400 border border-indigo-500/20">
               {totalPending} pending

@@ -1,26 +1,115 @@
+/* Import General Sans */
+@import url('https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700,800&display=swap');
+
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Light Mode (Peach Theme) Default Custom Properties */
+  --bg-base: #FFF8F3;
+  --bg-elevated: #FFEDE1;
+  --glass-surface: rgba(255, 246, 240, 0.55);
+  --glass-border: rgba(255, 180, 140, 0.35);
+  --accent: #FF7A50;
+  --accent-strong: #E85D3A;
+  --accent-soft: #FFD9C2;
+  --text-primary: #2B1D16;
+  --text-secondary: #8A6F63;
+  --success: #3FA66B;
+  --focus-high: #7B5CFA;
+  --danger: #E14F5A;
+  --orb-1: #FFB68A;
+  --orb-2: #FF8FA3;
+
+  --background: var(--bg-base);
+  --foreground: var(--text-primary);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
+/* System preferences fallback to Dark mode */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg-base: #08090D;
+    --bg-elevated: #101218;
+    --glass-surface: rgba(20, 22, 30, 0.55);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --accent: #7C6CFF;
+    --accent-strong: #9B8CFF;
+    --accent-soft: #2A2450;
+    --text-primary: #F3F1EE;
+    --text-secondary: #8D93A6;
+    --success: #4ADE9B;
+    --focus-high: #7C6CFF;
+    --danger: #FF6B7A;
+    --orb-1: #4C3BC9;
+    --orb-2: #1E90A3;
+
+    --background: var(--bg-base);
+    --foreground: var(--text-primary);
   }
+}
+
+/* Explicit data-theme settings override */
+[data-theme="light"] {
+  --bg-base: #FFF8F3;
+  --bg-elevated: #FFEDE1;
+  --glass-surface: rgba(255, 246, 240, 0.55);
+  --glass-border: rgba(255, 180, 140, 0.35);
+  --accent: #FF7A50;
+  --accent-strong: #E85D3A;
+  --accent-soft: #FFD9C2;
+  --text-primary: #2B1D16;
+  --text-secondary: #8A6F63;
+  --success: #3FA66B;
+  --focus-high: #7B5CFA;
+  --danger: #E14F5A;
+  --orb-1: #FFB68A;
+  --orb-2: #FF8FA3;
+
+  --background: var(--bg-base);
+  --foreground: var(--text-primary);
+}
+
+[data-theme="dark"] {
+  --bg-base: #08090D;
+  --bg-elevated: #101218;
+  --glass-surface: rgba(20, 22, 30, 0.55);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --accent: #7C6CFF;
+  --accent-strong: #9B8CFF;
+  --accent-soft: #2A2450;
+  --text-primary: #F3F1EE;
+  --text-secondary: #8D93A6;
+  --success: #4ADE9B;
+  --focus-high: #7C6CFF;
+  --danger: #FF6B7A;
+  --orb-1: #4C3BC9;
+  --orb-2: #1E90A3;
+
+  --background: var(--bg-base);
+  --foreground: var(--text-primary);
+}
+
+@theme {
+  /* Dynamic colors using our CSS variables */
+  --color-bg-base: var(--bg-base);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-glass-surface: var(--glass-surface);
+  --color-glass-border: var(--glass-border);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-success: var(--success);
+  --color-focus-high: var(--focus-high);
+  --color-danger: var(--danger);
+  --color-orb-1: var(--orb-1);
+  --color-orb-2: var(--orb-2);
+
+  --font-sans: "General Sans", var(--font-geist-sans), sans-serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
 }
