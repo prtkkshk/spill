@@ -1,6 +1,6 @@
-# FocusFlow: Voice-to-Task Parser for ADHD Brains
+# Spill: Voice-to-Task Parser for ADHD Brains
 
-FocusFlow is a mobile-web-first, single-user Progressive Web App (PWA) designed to solve the ADHD "brain-dump friction" problem. It allows users to record a messy, unstructured voice thought for up to 3 minutes and instantly transcribes and extracts clean, action-oriented, verb-first tasks grouped by deadline and energy level.
+Spill is a mobile-web-first, single-user Progressive Web App (PWA) designed to solve the ADHD "brain-dump friction" problem. It allows users to record a messy, unstructured voice thought for up to 3 minutes and instantly transcribes and extracts clean, action-oriented, verb-first tasks grouped by deadline and energy level.
 
 ---
 
@@ -8,11 +8,11 @@ FocusFlow is a mobile-web-first, single-user Progressive Web App (PWA) designed 
 
 Standard task managers (Todoist, TickTick, etc.) fail for ADHD brains not due to lack of features, but because of **input friction**. To capture a task, you must open an app, navigate to a list, type details, choose labels, select energy levels, and set dates. In that 15-second window, the thought is often forgotten or discarded. 
 
-FocusFlow reduces input friction to **exactly one tap**:
+Spill reduces input friction to **exactly one tap**:
 1. Tap the giant microphone button.
 2. Speak a disorganized, self-interrupting brain dump.
 3. Tap stop.
-4. Gemini Flash transcribes, parses, categorizes, and updates the task list in real-time.
+4. Multimodal AI transcribes, parses, categorizes, and updates the task list in real-time.
 
 ---
 
@@ -40,8 +40,8 @@ This application is designed to run completely on free-tier infrastructure.
        │ (Saves raw transcript)           │ (Transcribes + returns parsed JSON tasks)
        ▼                                  ▼
 [Supabase Recordings Table] ◄──────── [Supabase Tasks Table]
-                                          ▲
-                                          │
+                                           ▲
+                                           │
 [PWA Task List Dashboard] ◄───────────────┘ (GET /api/tasks with optimistic completion PATCH)
 ```
 

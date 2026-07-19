@@ -262,4 +262,48 @@ describe('TaskList Component Tests', () => {
       }));
     });
   });
+
+  it('supports bulk clearing completed tasks with confirmation', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true }),
+    });
+
+    const mockTasksWithCompleted = {
+      ...mockTasks,
+      completed: [
+        {
+          id: 'completed-1',
+          description: 'A completed task description',
+          status: 'completed' as const,
+          fuzzy_deadline: 'today',
+          energy_level: 'low_focus',
+          context: 'home',
+          specific_deadline: null,
+          raw_transcript: 'some text',
+          recording_id: 'rec-1',
+          created_at: new Date().toISOString(),
+          completed_at: new Date().toISOString(),
+        },
+      ],
+    };
+
+    render(<TaskList initialTasks={mockTasksWithCompleted} onRefreshNeeded={mockOnRefreshNeeded} />);
+
+    // Click "Clear all" button (first step: prompts "Confirm Clear All?")
+    const clearButton = screen.getByRole('button', { name: 'Clear all' });
+    fireEvent.click(clearButton);
+
+    expect(screen.getByRole('button', { name: 'Confirm Clear All?' })).toBeInTheDocument();
+
+    // Click "Confirm Clear All?"
+    fireEvent.click(clearButton);
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/tasks', expect.objectContaining({
+        method: 'DELETE',
+        body: expect.stringContaining('"scope":"completed"'),
+      }));
+    });
+  });
 });

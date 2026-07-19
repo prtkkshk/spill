@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Task, FuzzyDeadline } from '@/lib/types';
+import { Task } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
 
 type GroupKey = 'overdue' | 'today' | 'this_week' | 'next_week' | 'anytime' | 'completed';
@@ -19,21 +19,20 @@ interface TaskListProps {
 }
 
 export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProps) {
-  // Local state to manage tasks for optimistic UI updates
   const [localTasks, setLocalTasks] = useState(initialTasks);
   const [completingIds, setCompletingIds] = useState<Set<string>>(new Set());
 
-  // Keep local tasks in sync when props change
   useEffect(() => {
     setLocalTasks(initialTasks);
   }, [initialTasks]);
 
-  // Inline Edit and Delete States
+  // Inline Edit, Delete, and Clear states
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDesc, setEditDesc] = useState('');
   const [editDeadline, setEditDeadline] = useState<string>('');
   const [editEnergy, setEditEnergy] = useState<string>('');
   const [isCompletedExpanded, setIsCompletedExpanded] = useState(false);
+  const [isClearingCompleted, setIsClearingCompleted] = useState(false);
 
   const startEdit = (task: Task) => {
     setEditingId(task.id);
@@ -62,7 +61,6 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
       energy_level: editEnergy,
     };
 
-    // Optimistic UI Update: move tasks if deadline group changes
     setLocalTasks((prev) => {
       if (currentGroup !== targetGroup) {
         return {
@@ -104,7 +102,6 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
     } catch (error) {
       console.error('Failed to save task edit, rolling back:', error);
 
-      // Rollback
       setLocalTasks((prev) => {
         if (currentGroup !== targetGroup) {
           return {
@@ -133,7 +130,6 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
 
     if (!confirm('Are you sure you want to delete this task?')) return;
 
-    // Optimistic UI Update
     setLocalTasks((prev) => {
       return {
         ...prev,
@@ -158,7 +154,6 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
     } catch (error) {
       console.error('Failed to delete task, rolling back:', error);
 
-      // Rollback
       setLocalTasks((prev) => {
         if (prev[currentGroup].some((t) => t.id === taskId)) return prev;
         const updatedList = [...prev[currentGroup], taskToDelete].sort(
@@ -174,6 +169,36 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
     }
   };
 
+  const handleClearCompleted = async () => {
+    if (!isClearingCompleted) {
+      setIsClearingCompleted(true);
+      setTimeout(() => setIsClearingCompleted(false), 4000);
+      return;
+    }
+
+    const previousCompleted = localTasks.completed || [];
+    setLocalTasks((prev) => ({ ...prev, completed: [] }));
+    setIsClearingCompleted(false);
+
+    try {
+      const response = await fetch('/api/tasks', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scope: 'completed' }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to clear completed tasks');
+      }
+
+      onRefreshNeeded();
+    } catch (error) {
+      console.error('Failed to clear completed tasks:', error);
+      setLocalTasks((prev) => ({ ...prev, completed: previousCompleted }));
+      alert('Failed to clear completed tasks. Connection error.');
+    }
+  };
+
   const handleToggleComplete = async (taskId: string, currentGroup: GroupKey) => {
     const originalGroupList = localTasks[currentGroup] || [];
     const taskToToggle = originalGroupList.find((t) => t.id === taskId);
@@ -183,7 +208,6 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
     const isUndoing = currentGroup === 'completed';
 
     if (isUndoing) {
-      // Re-classify target group for pending placement
       let targetGroup = taskToToggle.fuzzy_deadline as GroupKey;
       if (targetGroup === 'today') {
         const taskDate = new Date(taskToToggle.created_at);
@@ -210,7 +234,6 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
         completed_at: null,
       };
 
-      // Optimistic UI Update: move from completed to targetGroup
       setLocalTasks((prev) => {
         return {
           ...prev,
@@ -238,7 +261,6 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
       } catch (error) {
         console.error('Failed to undo task completion, rolling back:', error);
 
-        // Rollback
         setLocalTasks((prev) => {
           return {
             ...prev,
@@ -252,14 +274,12 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
         alert('Failed to undo task completion. Connection error.');
       }
     } else {
-      // Mark complete flow
       setCompletingIds((prev) => {
         const next = new Set(prev);
         next.add(taskId);
         return next;
       });
 
-      // Wait 300ms for animation
       setTimeout(async () => {
         const completedTask = {
           ...taskToToggle,
@@ -271,7 +291,7 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
           return {
             ...prev,
             [currentGroup]: prev[currentGroup].filter((t) => t.id !== taskId),
-            completed: [completedTask, ...(prev.completed || [])].slice(0, 10), // Limit to 10 recently completed
+            completed: [completedTask, ...(prev.completed || [])].slice(0, 10),
           };
         });
 
@@ -298,7 +318,6 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
         } catch (error) {
           console.error('Failed to complete task, rolling back:', error);
 
-          // Rollback
           setLocalTasks((prev) => {
             return {
               ...prev,
@@ -318,13 +337,13 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
   const getEnergyBadge = (level: string) => {
     if (level === 'high_focus') {
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-focus-high/15 text-focus-high border border-focus-high/20 shadow-sm transition-colors duration-500">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-focus-high/15 text-focus-high border border-focus-high/25 shadow-xs">
           ⚡ High Focus
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-success/15 text-success border border-success/20 shadow-sm transition-colors duration-500">
+      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-success/15 text-success border border-success/25 shadow-xs">
         ☕ Low Focus
       </span>
     );
@@ -344,14 +363,14 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
     const isOverdue = groupKey === 'overdue';
 
     return (
-      <div className="space-y-4">
-        <div className="flex flex-col px-1">
-          <h3 className={`text-xs font-extrabold uppercase tracking-widest transition-colors duration-500 ${
-            isOverdue ? 'text-danger animate-pulse' : 'text-text-secondary'
+      <div className="space-y-3">
+        <div className="flex flex-col px-0.5">
+          <h3 className={`text-xs font-bold uppercase tracking-wider transition-colors duration-300 ${
+            isOverdue ? 'text-danger' : 'text-text-secondary'
           }`}>{title}</h3>
-          <span className="text-[10px] text-text-secondary/70 transition-colors duration-500">{subtitle}</span>
+          <span className="text-[11px] text-text-secondary/70">{subtitle}</span>
         </div>
-        <div className="space-y-3 relative">
+        <div className="space-y-2.5 relative">
           <AnimatePresence mode="popLayout">
             {list.map((task) => {
               const isCompleting = completingIds.has(task.id);
@@ -362,31 +381,30 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
                   <motion.div
                     key={task.id}
                     layout
-                    initial={{ opacity: 0, scale: 0.95 }}
+                    initial={{ opacity: 0, scale: 0.97 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
+                    exit={{ opacity: 0, scale: 0.97 }}
                     transition={{ type: "spring", stiffness: 350, damping: 26 }}
-                    className="flex flex-col space-y-4 bg-glass-surface/85 border border-glass-border/40 rounded-2xl p-4 shadow-md backdrop-blur-md"
+                    className="flex flex-col space-y-3 bg-bg-elevated border border-accent/40 rounded-2xl p-4 shadow-lg"
                   >
                     <textarea
                       value={editDesc}
                       onChange={(e) => setEditDesc(e.target.value)}
-                      className="w-full bg-glass-surface/50 border border-glass-border/30 rounded-xl p-2.5 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/30 min-h-[70px] resize-none font-bold"
+                      className="w-full bg-bg-base border border-glass-border/40 rounded-xl p-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40 min-h-[75px] resize-none font-medium"
                       placeholder="Task description..."
                     />
 
-                    {/* Deadline selector */}
                     <div className="flex flex-col space-y-1 px-0.5">
-                      <span className="text-[9px] uppercase tracking-wider text-text-secondary font-extrabold">Fuzzy Deadline</span>
+                      <span className="text-[10px] uppercase tracking-wider text-text-secondary font-bold">Fuzzy Deadline</span>
                       <div className="flex flex-wrap gap-1.5">
                         {(['today', 'this_week', 'next_week', 'anytime'] as const).map((dl) => (
                           <button
                             key={dl}
                             type="button"
                             onClick={() => setEditDeadline(dl)}
-                            className={`px-2.5 py-1 rounded-lg text-[9px] font-extrabold uppercase tracking-wide transition cursor-pointer ${
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide transition cursor-pointer ${
                               editDeadline === dl
-                                ? 'bg-accent text-white shadow-sm shadow-accent/20'
+                                ? 'bg-accent text-white shadow-xs'
                                 : 'bg-glass-surface border border-glass-border/30 text-text-secondary hover:bg-accent/10'
                             }`}
                           >
@@ -396,20 +414,19 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
                       </div>
                     </div>
 
-                    {/* Focus Level selector */}
                     <div className="flex flex-col space-y-1 px-0.5">
-                      <span className="text-[9px] uppercase tracking-wider text-text-secondary font-extrabold">Energy Level</span>
+                      <span className="text-[10px] uppercase tracking-wider text-text-secondary font-bold">Energy Level</span>
                       <div className="flex space-x-1.5">
                         {(['high_focus', 'low_focus'] as const).map((ef) => (
                           <button
                             key={ef}
                             type="button"
                             onClick={() => setEditEnergy(ef)}
-                            className={`px-2.5 py-1 rounded-lg text-[9px] font-extrabold uppercase tracking-wide transition cursor-pointer ${
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide transition cursor-pointer ${
                               editEnergy === ef
                                 ? ef === 'high_focus'
-                                  ? 'bg-focus-high text-white shadow-sm shadow-focus-high/20'
-                                  : 'bg-success text-white shadow-sm shadow-success/20'
+                                  ? 'bg-focus-high text-white shadow-xs'
+                                  : 'bg-success text-white shadow-xs'
                                 : 'bg-glass-surface border border-glass-border/30 text-text-secondary hover:bg-accent/10'
                             }`}
                           >
@@ -419,18 +436,17 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
                       </div>
                     </div>
 
-                    {/* Action buttons */}
                     <div className="flex space-x-2 pt-1 justify-end">
                       <button
                         onClick={cancelEdit}
-                        className="px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase bg-glass-surface border border-glass-border/40 text-text-primary hover:bg-accent/10 transition cursor-pointer"
+                        className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase bg-glass-surface border border-glass-border/40 text-text-primary hover:bg-glass-surface/80 transition cursor-pointer"
                       >
                         Cancel
                       </button>
                       <button
                         onClick={() => saveEdit(task.id, groupKey)}
                         disabled={!editDesc.trim()}
-                        className="px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase bg-accent text-white hover:bg-accent-strong disabled:opacity-30 disabled:scale-100 transition cursor-pointer"
+                        className="px-3.5 py-1.5 rounded-lg text-[10px] font-bold uppercase bg-accent text-white hover:bg-accent-strong disabled:opacity-30 transition cursor-pointer shadow-sm"
                       >
                         Save
                       </button>
@@ -443,23 +459,22 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
                 <motion.div
                   key={task.id}
                   layout
-                  initial={{ opacity: 0, y: 15 }}
+                  initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, x: 20 }}
                   transition={{ type: "spring", stiffness: 350, damping: 26 }}
-                  className={`flex items-start space-x-4 border rounded-2xl p-4 shadow-sm hover:shadow-md backdrop-blur-md transition-all duration-300 hover:bg-glass-surface/80 group select-none ${
+                  className={`flex items-start space-x-3.5 border rounded-2xl p-4 transition-all duration-300 group ${
                     isOverdue 
                       ? 'bg-danger/5 border-danger/25 hover:border-danger/45' 
-                      : 'bg-glass-surface/50 border-glass-border/30 hover:border-glass-border/50'
+                      : 'bg-bg-elevated/90 border-glass-border/40 hover:border-glass-border/70 hover:bg-bg-elevated'
                   } ${
                     isCompleting ? 'opacity-35 scale-95 translate-x-2' : ''
                   }`}
                 >
-                  {/* Custom Checkbox target */}
                   <button
                     onClick={() => handleToggleComplete(task.id, groupKey)}
                     disabled={isCompleting}
-                    className={`mt-0.5 flex-shrink-0 h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 cursor-pointer ${
+                    className={`mt-0.5 flex-shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 cursor-pointer ${
                       isCompleting 
                         ? 'border-success bg-success/20 text-success' 
                         : 'border-text-secondary/40 group-hover:border-accent hover:bg-accent/10 text-transparent'
@@ -467,24 +482,22 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
                     aria-label="Mark task complete"
                   >
                     {isCompleting ? (
-                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
+                      <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
                     ) : (
-                      <svg className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 group-hover:text-accent transition-opacity duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
+                      <svg className="h-3 w-3 opacity-0 group-hover:opacity-100 group-hover:text-accent transition-opacity duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
                     )}
                   </button>
 
-                  {/* Card Content */}
                   <div className="flex-1 space-y-2 min-w-0">
                     <div className="flex items-start justify-between space-x-2">
-                      <p className={`text-text-primary font-bold text-sm leading-relaxed break-words transition-colors duration-500 ${isCompleting ? 'line-through text-text-secondary/60' : ''}`}>
+                      <p className={`text-text-primary font-medium text-sm leading-relaxed break-words ${isCompleting ? 'line-through text-text-secondary/60' : ''}`}>
                         {task.description}
                       </p>
                       
-                      {/* Pencil and Trash icons */}
                       {!isCompleting && (
                         <div className="flex space-x-1 opacity-45 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0">
                           <button
@@ -509,18 +522,17 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
                       )}
                     </div>
                     
-                    {/* Metadata and Context */}
-                    <div className="flex flex-wrap gap-2 items-center">
+                    <div className="flex flex-wrap gap-1.5 items-center">
                       {getEnergyBadge(task.energy_level)}
                       
                       {task.specific_deadline && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-danger/15 text-danger border border-danger/20 shadow-sm transition-colors duration-500">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-danger/15 text-danger border border-danger/25 shadow-xs">
                           🗓️ {task.specific_deadline}
                         </span>
                       )}
 
                       {task.context && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-glass-surface/50 border border-glass-border/30 text-text-secondary shadow-sm transition-all duration-300 truncate max-w-[180px]" title={task.context}>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-glass-surface border border-glass-border/40 text-text-secondary leading-snug break-words max-w-full" title={task.context}>
                           🏷️ {task.context}
                         </span>
                       )}
@@ -538,15 +550,15 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
   return (
     <div className="w-full max-w-md mx-auto space-y-8 p-4">
       {!hasTasks ? (
-        <div className="text-center py-14 px-6 bg-glass-surface/40 border border-glass-border/20 rounded-3xl space-y-4 backdrop-blur-md shadow-sm transition-all duration-300">
-          <span className="text-5xl block animate-bounce" style={{ animationDuration: '3s' }}>🎉</span>
-          <h3 className="text-lg font-extrabold text-text-primary transition-colors duration-500">All clear, you're doing great!</h3>
-          <p className="text-xs text-text-secondary/80 max-w-xs mx-auto leading-relaxed transition-colors duration-500">
-            No pending tasks left. Tap the microphone above to dump whatever is on your mind, and let's organize it together.
+        <div className="text-center py-12 px-6 bg-bg-elevated/60 border border-glass-border/30 rounded-3xl space-y-3 backdrop-blur-md shadow-xs">
+          <span className="text-4xl block animate-bounce" style={{ animationDuration: '3s' }}>🎉</span>
+          <h3 className="text-base font-bold text-text-primary">All clear, you're doing great!</h3>
+          <p className="text-xs text-text-secondary max-w-xs mx-auto leading-relaxed">
+            No pending tasks left. Tap the microphone above to spill whatever is on your mind, and let's organize it.
           </p>
         </div>
       ) : (
-        <div className="space-y-10">
+        <div className="space-y-8">
           {renderGroup('overdue', 'Overdue Today', 'Pending tasks from prior days')}
           {renderGroup('today', 'Today', 'Crucial focus for today')}
           {renderGroup('this_week', 'This Week', 'Plan to tackle by Sunday')}
@@ -555,48 +567,60 @@ export default function TaskList({ initialTasks, onRefreshNeeded }: TaskListProp
         </div>
       )}
 
-      {/* Collapsible Completed Section */}
+      {/* Collapsible Completed Section with Clear All */}
       {localTasks.completed && localTasks.completed.length > 0 && (
         <div className="pt-6 border-t border-glass-border/30">
-          <button
-            onClick={() => setIsCompletedExpanded(!isCompletedExpanded)}
-            className="w-full flex items-center justify-between px-2 py-1.5 rounded-xl hover:bg-glass-surface/30 text-text-secondary hover:text-text-primary transition-all duration-300 font-extrabold text-xs uppercase tracking-wider cursor-pointer"
-          >
-            <span>Recently Completed ({localTasks.completed.length})</span>
-            <svg
-              className={`h-4 w-4 transition-transform duration-300 ${isCompletedExpanded ? 'rotate-180' : ''}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2.5}
+          <div className="flex items-center justify-between px-1 mb-2">
+            <button
+              onClick={() => setIsCompletedExpanded(!isCompletedExpanded)}
+              className="flex items-center space-x-2 text-text-secondary hover:text-text-primary transition-all duration-200 font-bold text-xs uppercase tracking-wider cursor-pointer"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
+              <span>Recently Completed ({localTasks.completed.length})</span>
+              <svg
+                className={`h-3.5 w-3.5 transition-transform duration-300 ${isCompletedExpanded ? 'rotate-180' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            <button
+              onClick={handleClearCompleted}
+              className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg border transition-all cursor-pointer ${
+                isClearingCompleted
+                  ? 'bg-danger text-white border-danger animate-pulse'
+                  : 'text-text-secondary hover:text-danger border-glass-border/40 hover:border-danger/40'
+              }`}
+            >
+              {isClearingCompleted ? 'Confirm Clear All?' : 'Clear all'}
+            </button>
+          </div>
 
           {isCompletedExpanded && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="mt-4 space-y-3"
+              className="mt-3 space-y-2"
             >
               {localTasks.completed.map((task) => (
                 <div
                   key={task.id}
-                  className="flex items-center space-x-4 bg-glass-surface/20 border border-glass-border/10 rounded-2xl p-4 opacity-75 hover:opacity-100 transition-opacity"
+                  className="flex items-center space-x-3.5 bg-bg-elevated/50 border border-glass-border/20 rounded-2xl p-3.5 opacity-70 hover:opacity-100 transition-opacity"
                 >
-                  {/* Completed Checkbox -> clicking it toggles (undoes) completion */}
                   <button
                     onClick={() => handleToggleComplete(task.id, 'completed')}
-                    className="flex-shrink-0 h-6 w-6 rounded-full border-2 border-success bg-success/20 text-success flex items-center justify-center cursor-pointer"
+                    className="flex-shrink-0 h-5 w-5 rounded-full border-2 border-success bg-success/20 text-success flex items-center justify-center cursor-pointer"
                     aria-label="Mark task pending"
                   >
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
+                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
                   </button>
-                  <span className="flex-1 text-sm text-text-secondary/80 line-through truncate">
+                  <span className="flex-1 text-xs text-text-secondary line-through break-words">
                     {task.description}
                   </span>
                 </div>

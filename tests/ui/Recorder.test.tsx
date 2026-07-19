@@ -62,7 +62,7 @@ describe('Recorder Component Tests', () => {
   it('renders initial idle state with instructions', () => {
     render(<Recorder onRecordingComplete={mockOnRecordingComplete} />);
     
-    expect(screen.getByText(/Tap mic to dump your thoughts/i)).toBeInTheDocument();
+    expect(screen.getByText(/Tap mic to spill your thoughts/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start recording' })).toBeInTheDocument();
   });
 
@@ -74,7 +74,7 @@ describe('Recorder Component Tests', () => {
 
     // Explainer title should display
     expect(screen.getByText('Microphone Permission')).toBeInTheDocument();
-    expect(screen.getByText(/FocusFlow transcribes and extracts/i)).toBeInTheDocument();
+    expect(screen.getByText(/Spill transcribes and extracts/i)).toBeInTheDocument();
   });
 
   it('starts recording and triggers live timer after permission is accepted', async () => {

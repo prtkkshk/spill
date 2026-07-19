@@ -1,13 +1,13 @@
-const CACHE_NAME = 'focusflow-v1';
+const CACHE_NAME = 'spill-v1';
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
-  '/icons/icon-192.jpg',
-  '/icons/icon-512.jpg'
+  '/icons/icon-192.png',
+  '/icons/icon-512.png'
 ];
 
 // Install event - Cache core app shell assets
-self.addEventListener('install', (event: any) => {
+self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('Opened cache and caching app shell');
@@ -19,7 +19,7 @@ self.addEventListener('install', (event: any) => {
 });
 
 // Activate event - Clean up old caches
-self.addEventListener('activate', (event: any) => {
+self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
@@ -37,7 +37,7 @@ self.addEventListener('activate', (event: any) => {
 });
 
 // Fetch event - Cache-first with Network fallback for static assets
-self.addEventListener('fetch', (event: any) => {
+self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
   // Skip API routes and other schemes (like chrome-extension or supabase REST calls)
@@ -74,7 +74,7 @@ self.addEventListener('fetch', (event: any) => {
         return response;
       }).catch(() => {
         // Offline fallback for HTML navigation
-        if (event.request.headers.get('accept').includes('text/html')) {
+        if (event.request.headers.get('accept') && event.request.headers.get('accept').includes('text/html')) {
           return caches.match('/');
         }
       });

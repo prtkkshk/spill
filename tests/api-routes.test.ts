@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GET as getTasksRoute, POST as postTasksRoute, PATCH as patchTasksRoute } from '@/app/api/tasks/route';
+import { GET as getTasksRoute, POST as postTasksRoute, PATCH as patchTasksRoute, DELETE as deleteTasksRoute } from '@/app/api/tasks/route';
 import { POST as cronRoute } from '@/app/api/cron/daily-reminder/route';
 import { POST as subscriptionRoute } from '@/app/api/push-subscription/route';
 
@@ -7,6 +7,7 @@ import { POST as subscriptionRoute } from '@/app/api/push-subscription/route';
 const mockSelect = vi.fn();
 const mockInsert = vi.fn();
 const mockUpdate = vi.fn();
+const mockDelete = vi.fn();
 const mockEq = vi.fn();
 const mockOrder = vi.fn();
 const mockMaybeSingle = vi.fn();
@@ -18,6 +19,7 @@ vi.mock('@/lib/supabase', () => {
       select: mockSelect,
       insert: mockInsert,
       update: mockUpdate,
+      delete: mockDelete,
       eq: mockEq,
       order: mockOrder,
       maybeSingle: mockMaybeSingle,
@@ -237,6 +239,42 @@ describe('API Route Unit Tests', () => {
       const json = await response.json();
       expect(json.success).toBe(true);
       expect(json.subscription.id).toBe('sub-1');
+    });
+  });
+
+  describe('DELETE /api/tasks', () => {
+    it('deletes a single task by id', async () => {
+      const mockReq = {
+        json: async () => ({ id: 'task-1' }),
+      } as Request;
+
+      mockDelete.mockReturnValue({
+        eq: mockEq.mockResolvedValue({ error: null }),
+      });
+
+      const response = await deleteTasksRoute(mockReq);
+      expect(response.status).toBe(200);
+
+      const json = await response.json();
+      expect(json.success).toBe(true);
+      expect(json.id).toBe('task-1');
+    });
+
+    it('clears all completed tasks when scope=completed', async () => {
+      const mockReq = {
+        json: async () => ({ scope: 'completed' }),
+      } as Request;
+
+      mockDelete.mockReturnValue({
+        eq: mockEq.mockResolvedValue({ error: null }),
+      });
+
+      const response = await deleteTasksRoute(mockReq);
+      expect(response.status).toBe(200);
+
+      const json = await response.json();
+      expect(json.success).toBe(true);
+      expect(json.message).toBe('Cleared all completed tasks');
     });
   });
 });

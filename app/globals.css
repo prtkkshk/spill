@@ -4,92 +4,92 @@
 @import "tailwindcss";
 
 :root {
-  /* Light Mode (Peach Theme) Default Custom Properties */
-  --bg-base: #FFF8F3;
-  --bg-elevated: #FFEDE1;
-  --glass-surface: rgba(255, 246, 240, 0.55);
-  --glass-border: rgba(255, 180, 140, 0.35);
-  --accent: #FF7A50;
-  --accent-strong: #E85D3A;
-  --accent-soft: #FFD9C2;
-  --text-primary: #2B1D16;
-  --text-secondary: #8A6F63;
-  --success: #3FA66B;
-  --focus-high: #7B5CFA;
-  --danger: #E14F5A;
-  --orb-1: #FFB68A;
-  --orb-2: #FF8FA3;
+  /* Default: Bold Minimal Dark Theme */
+  --bg-base: #0A0A0C;
+  --bg-elevated: #121318;
+  --glass-surface: rgba(18, 19, 24, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --accent: #6366F1;
+  --accent-strong: #818CF8;
+  --accent-soft: rgba(99, 102, 241, 0.18);
+  --text-primary: #F3F4F6;
+  --text-secondary: #9CA3AF;
+  --success: #10B981;
+  --focus-high: #8B5CF6;
+  --danger: #EF4444;
+  --orb-1: #4338CA;
+  --orb-2: #312E81;
 
   --background: var(--bg-base);
   --foreground: var(--text-primary);
 }
 
 /* System preferences fallback to Dark mode */
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: light) {
   :root {
-    --bg-base: #08090D;
-    --bg-elevated: #101218;
-    --glass-surface: rgba(20, 22, 30, 0.55);
-    --glass-border: rgba(255, 255, 255, 0.08);
-    --accent: #7C6CFF;
-    --accent-strong: #9B8CFF;
-    --accent-soft: #2A2450;
-    --text-primary: #F3F1EE;
-    --text-secondary: #8D93A6;
-    --success: #4ADE9B;
-    --focus-high: #7C6CFF;
-    --danger: #FF6B7A;
-    --orb-1: #4C3BC9;
-    --orb-2: #1E90A3;
+    --bg-base: #F9FAFB;
+    --bg-elevated: #FFFFFF;
+    --glass-surface: rgba(255, 255, 255, 0.8);
+    --glass-border: rgba(0, 0, 0, 0.08);
+    --accent: #4F46E5;
+    --accent-strong: #4338CA;
+    --accent-soft: #EEF2FF;
+    --text-primary: #111827;
+    --text-secondary: #4B5563;
+    --success: #059669;
+    --focus-high: #7C3AED;
+    --danger: #DC2626;
+    --orb-1: #C7D2FE;
+    --orb-2: #E0E7FF;
 
     --background: var(--bg-base);
     --foreground: var(--text-primary);
   }
 }
 
-/* Explicit data-theme settings override */
+/* Explicit data-theme overrides */
 [data-theme="light"] {
-  --bg-base: #FFF8F3;
-  --bg-elevated: #FFEDE1;
-  --glass-surface: rgba(255, 246, 240, 0.55);
-  --glass-border: rgba(255, 180, 140, 0.35);
-  --accent: #FF7A50;
-  --accent-strong: #E85D3A;
-  --accent-soft: #FFD9C2;
-  --text-primary: #2B1D16;
-  --text-secondary: #8A6F63;
-  --success: #3FA66B;
-  --focus-high: #7B5CFA;
-  --danger: #E14F5A;
-  --orb-1: #FFB68A;
-  --orb-2: #FF8FA3;
+  --bg-base: #F9FAFB;
+  --bg-elevated: #FFFFFF;
+  --glass-surface: rgba(255, 255, 255, 0.8);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --accent: #4F46E5;
+  --accent-strong: #4338CA;
+  --accent-soft: #EEF2FF;
+  --text-primary: #111827;
+  --text-secondary: #4B5563;
+  --success: #059669;
+  --focus-high: #7C3AED;
+  --danger: #DC2626;
+  --orb-1: #C7D2FE;
+  --orb-2: #E0E7FF;
 
   --background: var(--bg-base);
   --foreground: var(--text-primary);
 }
 
 [data-theme="dark"] {
-  --bg-base: #08090D;
-  --bg-elevated: #101218;
-  --glass-surface: rgba(20, 22, 30, 0.55);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --accent: #7C6CFF;
-  --accent-strong: #9B8CFF;
-  --accent-soft: #2A2450;
-  --text-primary: #F3F1EE;
-  --text-secondary: #8D93A6;
-  --success: #4ADE9B;
-  --focus-high: #7C6CFF;
-  --danger: #FF6B7A;
-  --orb-1: #4C3BC9;
-  --orb-2: #1E90A3;
+  --bg-base: #0A0A0C;
+  --bg-elevated: #121318;
+  --glass-surface: rgba(18, 19, 24, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --accent: #6366F1;
+  --accent-strong: #818CF8;
+  --accent-soft: rgba(99, 102, 241, 0.18);
+  --text-primary: #F3F4F6;
+  --text-secondary: #9CA3AF;
+  --success: #10B981;
+  --focus-high: #8B5CF6;
+  --danger: #EF4444;
+  --orb-1: #4338CA;
+  --orb-2: #312E81;
 
   --background: var(--bg-base);
   --foreground: var(--text-primary);
 }
 
 @theme {
-  /* Dynamic colors using our CSS variables */
+  /* Dynamic colors using CSS variables */
   --color-bg-base: var(--bg-base);
   --color-bg-elevated: var(--bg-elevated);
   --color-glass-surface: var(--glass-surface);
@@ -114,10 +114,10 @@ body {
   font-family: var(--font-sans);
 }
 
-/* Ambient background styling */
+/* Subtle ambient noise background overlay */
 .noise-overlay {
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-  opacity: 0.02;
+  opacity: 0.015;
 }
 
 @keyframes blob-drift {
@@ -125,7 +125,7 @@ body {
     transform: translate(0px, 0px) scale(1);
   }
   33% {
-    transform: translate(30px, -50px) scale(1.1) rotate(0deg);
+    transform: translate(30px, -50px) scale(1.05) rotate(0deg);
   }
   66% {
     transform: translate(-20px, 20px) scale(0.95) rotate(180deg);
@@ -137,7 +137,7 @@ body {
     transform: translate(0px, 0px) scale(1);
   }
   33% {
-    transform: translate(-40px, 30px) scale(0.9) rotate(0deg);
+    transform: translate(-40px, 30px) scale(0.95) rotate(0deg);
   }
   66% {
     transform: translate(30px, -20px) scale(1.05) rotate(-180deg);

@@ -191,16 +191,31 @@ export async function PATCH(req: Request) {
   }
 }
 
-// DELETE: remove a task permanently from the database
+// DELETE: remove a task permanently or bulk clear completed tasks
 export async function DELETE(req: Request) {
   try {
-    const { id } = await req.json();
-
-    if (!id) {
-      return NextResponse.json({ error: 'Missing task id' }, { status: 400 });
-    }
+    const body = await req.json();
+    const { id, scope } = body;
 
     const supabase = getSupabaseService();
+
+    if (scope === 'completed') {
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('status', 'completed');
+
+      if (error) {
+        console.error('Failed to clear completed tasks:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: true, message: 'Cleared all completed tasks' });
+    }
+
+    if (!id) {
+      return NextResponse.json({ error: 'Missing task id or scope' }, { status: 400 });
+    }
 
     const { error } = await supabase
       .from('tasks')
@@ -214,6 +229,7 @@ export async function DELETE(req: Request) {
 
     return NextResponse.json({
       success: true,
+      id,
     });
   } catch (error: any) {
     console.error('Route error in DELETE /api/tasks:', error);

@@ -15,18 +15,18 @@ const geistMono = Geist_Mono({
 import type { Viewport } from "next";
 
 export const metadata: Metadata = {
-  title: "FocusFlow",
+  title: "Spill",
   description: "Voice-to-Task Parser for ADHD Brains",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "FocusFlow",
+    title: "Spill",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#090d16",
+  themeColor: "#0A0A0C",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -41,6 +41,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
@@ -48,9 +49,8 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                const persisted = localStorage.getItem('focusflow-theme');
-                const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                const theme = persisted || (systemDark ? 'dark' : 'light');
+                const persisted = localStorage.getItem('spill-theme') || localStorage.getItem('focusflow-theme');
+                const theme = persisted || 'dark';
                 document.documentElement.setAttribute('data-theme', theme);
               } catch (e) {}
             `,

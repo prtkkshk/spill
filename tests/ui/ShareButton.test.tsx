@@ -69,7 +69,7 @@ describe('ShareButton Component Tests', () => {
 
     expect(mockShare).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: 'FocusFlow Task List',
+        title: 'Spill Task List',
         text: expect.stringContaining('Overdue task'),
       })
     );

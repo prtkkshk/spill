@@ -26,10 +26,10 @@ export default function ShareButton({ tasks }: ShareButtonProps) {
       tasks.anytime.length;
 
     if (totalCount === 0) {
-      return '📋 FocusFlow Tasks\n\n🎉 All clear! No pending tasks.';
+      return '📋 Spill Tasks\n\n🎉 All clear! No pending tasks.';
     }
 
-    const lines: string[] = ['📋 *FocusFlow Task List*\n'];
+    const lines: string[] = ['📋 *Spill Task List*\n'];
 
     if (tasks.overdue && tasks.overdue.length > 0) {
       lines.push('⚠️ *Overdue*');
@@ -66,7 +66,7 @@ export default function ShareButton({ tasks }: ShareButtonProps) {
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({
-          title: 'FocusFlow Task List',
+          title: 'Spill Task List',
           text: text,
         });
         return;
