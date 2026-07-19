@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Recorder from '@/components/Recorder';
 import TaskList from '@/components/TaskList';
 import ThemeToggle from '@/components/ThemeToggle';
+import ShareButton from '@/components/ShareButton';
 import { Task } from '@/lib/types';
 import { motion } from 'framer-motion';
 
@@ -193,8 +194,9 @@ export default function Home() {
           <h1 className="text-xl font-extrabold tracking-tight text-text-primary transition-colors duration-500">FocusFlow</h1>
         </div>
         
-        {/* Simple Badge Dashboard with Theme Toggle */}
-        <div className="flex items-center space-x-3">
+        {/* Simple Badge Dashboard with Theme Toggle & Share */}
+        <div className="flex items-center space-x-2">
+          <ShareButton tasks={tasks} />
           <ThemeToggle />
           {totalPending > 0 ? (
             <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-accent-soft text-accent border border-accent/20 shadow-sm transition-colors duration-500">

@@ -86,8 +86,8 @@ Each milestone closes only when its Definition of Done (see `project_plan.md`) p
 - **DoD:** Tapping complete moves task to Completed Today list; tapping it again restores it to pending in the DB and UI.
 
 ## Milestone: Phase 13 — Share List via Web Share API
-- [ ] Add share button to header that compiles markdown formatted list — owner: Frontend
-- [ ] Invoke `navigator.share()` or fallback to clipboard copy — owner: Frontend
+- [x] Add share button to header that compiles markdown formatted list — owner: Frontend
+- [x] Invoke `navigator.share()` or fallback to clipboard copy — owner: Frontend
 - **DoD:** Tapping share outputs a clean markdown list of pending tasks to the mobile share menu or clipboard.
 
 ## Definition of Done (MVP, project-level)
