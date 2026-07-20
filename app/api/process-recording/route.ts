@@ -33,19 +33,32 @@ export async function POST(req: Request) {
     const supabase = getSupabaseService();
 
     // 1. Insert into recordings table
-    const { data: recordingData, error: recordingError } = await supabase
+    const recPayload: any = {
+      transcript: parseResult.transcript || 'No transcript generated',
+      duration_seconds: durationSeconds,
+      user_id: user ? user.id : null,
+    };
+
+    let { data: recordingData, error: recordingError } = await supabase
       .from('recordings')
-      .insert({
-        transcript: parseResult.transcript || 'No transcript generated',
-        duration_seconds: durationSeconds,
-        user_id: user ? user.id : null,
-      })
+      .insert(recPayload)
       .select('id, transcript, duration_seconds, created_at')
       .single();
 
-    if (recordingError) {
+    if (recordingError && recordingError.code === '42703') {
+      delete recPayload.user_id;
+      const fallbackRec = await supabase
+        .from('recordings')
+        .insert(recPayload)
+        .select('id, transcript, duration_seconds, created_at')
+        .single();
+      recordingData = fallbackRec.data;
+      recordingError = fallbackRec.error;
+    }
+
+    if (recordingError || !recordingData) {
       console.error('Failed to save recording:', recordingError);
-      return NextResponse.json({ error: `Database insert failed: ${recordingError.message}` }, { status: 500 });
+      return NextResponse.json({ error: `Database insert failed: ${recordingError?.message || 'Failed to insert recording'}` }, { status: 500 });
     }
 
     const recordingId = recordingData.id;
@@ -65,10 +78,17 @@ export async function POST(req: Request) {
         user_id: user ? user.id : null,
       }));
 
-      const { data: tasksData, error: tasksError } = await supabase
+      let { data: tasksData, error: tasksError } = await supabase
         .from('tasks')
         .insert(tasksToInsert)
         .select();
+
+      if (tasksError && tasksError.code === '42703') {
+        const fallbackTasks = tasksToInsert.map(({ user_id, ...rest }) => rest);
+        const retryRes = await supabase.from('tasks').insert(fallbackTasks).select();
+        tasksData = retryRes.data;
+        tasksError = retryRes.error;
+      }
 
       if (tasksError) {
         console.error('Failed to save tasks:', tasksError);

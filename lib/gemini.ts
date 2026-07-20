@@ -29,6 +29,41 @@ Rules:
   ]
 }`;
 
+function extractJsonObject(text: string): string {
+  const firstCurly = text.indexOf('{');
+  if (firstCurly === -1) return text;
+
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+
+  for (let i = firstCurly; i < text.length; i++) {
+    const char = text[i];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (char === '\\') {
+      escape = true;
+      continue;
+    }
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (!inString) {
+      if (char === '{') depth++;
+      else if (char === '}') {
+        depth--;
+        if (depth === 0) {
+          return text.substring(firstCurly, i + 1);
+        }
+      }
+    }
+  }
+  return text;
+}
+
 export async function parseAudioBrainDump(
   base64Data: string,
   mimeType: string,
@@ -126,14 +161,7 @@ export async function parseAudioBrainDump(
   }
 
   const cleanedRawText = rawText.trim();
-  let jsonString = cleanedRawText;
-
-  // Extract JSON payload if wrapped in markdown code blocks or trailing commentary
-  const firstCurly = cleanedRawText.indexOf('{');
-  const lastCurly = cleanedRawText.lastIndexOf('}');
-  if (firstCurly !== -1 && lastCurly !== -1 && lastCurly > firstCurly) {
-    jsonString = cleanedRawText.substring(firstCurly, lastCurly + 1);
-  }
+  const jsonString = extractJsonObject(cleanedRawText);
 
   try {
     const parsed: ParseResult = JSON.parse(jsonString);

@@ -42,7 +42,17 @@ export async function GET(req: Request) {
       query = query.is('user_id', null);
     }
 
-    const { data: tasks, error } = await query.order('created_at', { ascending: false });
+    let { data: tasks, error } = await query.order('created_at', { ascending: false });
+
+    if (error && error.code === '42703') {
+      const fallbackRes = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+      tasks = fallbackRes.data;
+      error = fallbackRes.error;
+    }
 
     if (error) {
       console.error('Failed to fetch tasks:', error);
@@ -60,9 +70,20 @@ export async function GET(req: Request) {
       completedQuery = completedQuery.is('user_id', null);
     }
 
-    const { data: completedTasks, error: completedError } = await completedQuery
+    let { data: completedTasks, error: completedError } = await completedQuery
       .order('completed_at', { ascending: false })
       .limit(10);
+
+    if (completedError && completedError.code === '42703') {
+      const fallbackCompleted = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('status', 'completed')
+        .order('completed_at', { ascending: false })
+        .limit(10);
+      completedTasks = fallbackCompleted.data;
+      completedError = fallbackCompleted.error;
+    }
 
     if (completedError) {
       console.error('Failed to fetch completed tasks:', completedError);
@@ -125,18 +146,27 @@ export async function POST(req: Request) {
 
     const supabase = getSupabaseService();
 
-    const { data, error } = await supabase
+    const insertPayload: any = {
+      description: description.trim(),
+      status: 'pending',
+      fuzzy_deadline: fuzzy_deadline || 'today',
+      energy_level: energy_level || 'low_focus',
+      context: context || null,
+      user_id: user ? user.id : null,
+    };
+
+    let { data, error } = await supabase
       .from('tasks')
-      .insert({
-        description: description.trim(),
-        status: 'pending',
-        fuzzy_deadline: fuzzy_deadline || 'today',
-        energy_level: energy_level || 'low_focus',
-        context: context || null,
-        user_id: user ? user.id : null,
-      })
+      .insert(insertPayload)
       .select()
       .single();
+
+    if (error && error.code === '42703') {
+      delete insertPayload.user_id;
+      const fallbackRes = await supabase.from('tasks').insert(insertPayload).select().single();
+      data = fallbackRes.data;
+      error = fallbackRes.error;
+    }
 
     if (error) {
       console.error('Failed to create task manually:', error);
@@ -199,7 +229,13 @@ export async function PATCH(req: Request) {
       query = query.is('user_id', null);
     }
 
-    const { data, error } = await query.select().single();
+    let { data, error } = await query.select().single();
+
+    if (error && error.code === '42703') {
+      const fallbackRes = await supabase.from('tasks').update(updatePayload).eq('id', id).select().single();
+      data = fallbackRes.data;
+      error = fallbackRes.error;
+    }
 
     if (error) {
       console.error('Failed to update task:', error);
@@ -237,7 +273,12 @@ export async function DELETE(req: Request) {
         clearQuery = clearQuery.is('user_id', null);
       }
 
-      const { error } = await clearQuery;
+      let { error } = await clearQuery;
+
+      if (error && error.code === '42703') {
+        const fallbackRes = await supabase.from('tasks').delete().eq('status', 'completed');
+        error = fallbackRes.error;
+      }
 
       if (error) {
         console.error('Failed to clear completed tasks:', error);
@@ -262,7 +303,12 @@ export async function DELETE(req: Request) {
       deleteQuery = deleteQuery.is('user_id', null);
     }
 
-    const { error } = await deleteQuery;
+    let { error } = await deleteQuery;
+
+    if (error && error.code === '42703') {
+      const fallbackRes = await supabase.from('tasks').delete().eq('id', id);
+      error = fallbackRes.error;
+    }
 
     if (error) {
       console.error('Failed to delete task:', error);
