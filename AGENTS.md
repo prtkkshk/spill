@@ -1,5 +1,8 @@
 # Spill (formerly FocusFlow)
 
+> 🚨 **CRITICAL INSTRUCTION FOR ALL AI AGENTS & DEVELOPERS:**  
+> Before making any code modifications, database changes, or architectural decisions in this codebase, you MUST read **`PROJECT_PLAYBOOK.md`** first. It contains complete context, environment configuration, database schema & RLS policies, Gemini parsing safeguards, testing rules, and step-by-step git commit and Vercel deployment workflows.
+
 A voice-to-task parser for capturing tasks on the go. You press one button, talk through a messy
 brain-dump for up to ~3 minutes, and get back a clean, categorized task list you can
 check off from your phone's browser. Single-user, $0-budget, mobile-web-first — built
