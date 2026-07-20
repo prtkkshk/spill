@@ -11,7 +11,7 @@ FocusFlow is App Router. These are the non-obvious project rules; follow them ov
   const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
   ```
 - Explicit state machine: `idle → recording → uploading → parsing → done` (plus `error`).
-- The recording timer must be **visible and persistent** while recording — ADHD users need
+- The recording timer must be **visible and persistent** while recording — users need
   elapsed time on screen, not hidden.
 - Cap recording client-side at ~3 minutes; auto-stop at the cap to keep Gemini calls fast/cheap.
 - Show a plain-language explanation of *why* the mic is needed **before** the OS permission

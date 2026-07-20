@@ -1,6 +1,6 @@
 # Spill (formerly FocusFlow)
 
-A voice-to-task parser for ADHD brains. You press one button, talk through a messy
+A voice-to-task parser for capturing tasks on the go. You press one button, talk through a messy
 brain-dump for up to ~3 minutes, and get back a clean, categorized task list you can
 check off from your phone's browser. Single-user, $0-budget, mobile-web-first — built
 to be a genuinely useful daily tool *and* a strong portfolio piece.

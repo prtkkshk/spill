@@ -1,5 +1,5 @@
 # FocusFlow — Project Plan (Google Antigravity build)
-### Voice-to-Task Parser for ADHD Brains — Portfolio Build, $0 Budget, Mobile-Web-First
+### Voice-to-Task Parser for Capturing Tasks On the Go — Portfolio Build, $0 Budget, Mobile-Web-First
 
 ---
 
@@ -234,7 +234,7 @@ Each phase lists its work and a **Definition of Done** the agent must verify bef
     ? 'audio/webm'
     : 'audio/mp4';
   ```
-- [ ] Agent: clear UI states: idle → recording (with a **visible, persistent** timer — ADHD users need the time to stay visible) → uploading → parsing → done
+- [ ] Agent: clear UI states: idle → recording (with a **visible, persistent** timer, so you always know how much time is left) → uploading → parsing → done
 - [ ] Agent: cap recording length (~3 min) client-side to keep Gemini calls fast and cheap
 - [ ] Agent: handle the mic permission prompt gracefully — show a clear explanation *before* the OS dialog so users don't reflexively deny it
 - [ ] 🧑 Grant mic permission when testing on a real device
@@ -243,7 +243,7 @@ Each phase lists its work and a **Definition of Done** the agent must verify bef
 
 ### Phase 3 — Task List UI (2–3 hrs)
 - [ ] Agent: card-based list grouped into three sections — "Today," "This Week," "Low-Energy / Anytime"
-- [ ] Agent: tap-to-complete with immediate **optimistic** UI update (don't wait on the network round-trip to show the checkmark — ADHD-friendly apps live or die on instant feedback), reconciling with the `PATCH` result
+- [ ] Agent: tap-to-complete with immediate **optimistic** UI update (don't wait on the network round-trip to show the checkmark, instant feedback matters for a tool used in passing moments), reconciling with the `PATCH` result
 - [ ] Agent: empty state that doesn't feel like failure — "Nothing pending. Go brain-dump something."
 - [ ] Agent: auto-refresh after a new recording completes
 
@@ -273,16 +273,16 @@ Each phase lists its work and a **Definition of Done** the agent must verify bef
 **DoD:** live HTTPS URL serves the app; full record→parse→list flow works on a real phone against production env; the keep-alive workflow is committed and scheduled.
 
 ### Phase 7 — Testing Pass (1–2 hrs) — QA agent + 🧑
-- [ ] 🧑 Record a genuinely messy, ADHD-style ramble (interrupt yourself, change topics, mumble) and confirm the parser holds up — not a clean scripted sentence
+- [ ] 🧑 Record a genuinely messy, self-interrupting ramble (interrupt yourself, change topics, mumble) and confirm the parser holds up — not a clean scripted sentence
 - [ ] 🧑 Test on both iOS Safari and Android Chrome — audio codec and permission behavior differ meaningfully
 - [ ] Agent: test bad/no network mid-recording; the empty state; all-tasks-completed; and a very long transcript (edge cases interviewers ask about)
 
 **DoD:** the golden-set recordings parse acceptably; both mobile browsers complete the core flow; network-failure and edge-case states degrade gracefully with no uncaught errors.
 
 ### Phase 8 — Portfolio Packaging (1–2 hrs)
-- [ ] Agent: write a proper `README.md` — what it does, why (the ADHD-friction problem), architecture diagram, tech choices and *why*, what you'd do differently with more time
+- [ ] Agent: write a proper `README.md` — what it does, why (the input-friction problem), architecture diagram, tech choices and *why*, what you'd do differently with more time
 - [ ] 🧑 Record a 60–90 second screen-capture demo (talking → parsed list appearing) — worth more than paragraphs to a reviewer
-- [ ] Agent: note honestly in the README that this is a crowded space (Tiimo, Llama Life, etc.) and frame it explicitly as a learning/portfolio exercise — reads as self-aware and credible, not weak
+- [ ] Agent: note honestly in the README that this is a crowded space (Todoist, TickTick, etc.) and frame it explicitly as a learning/portfolio exercise — reads as self-aware and credible, not weak
 
 **DoD:** README covers problem, architecture, and tradeoffs; demo clip is linked; repo is public and clean (no secrets, no dead scaffolding).
 

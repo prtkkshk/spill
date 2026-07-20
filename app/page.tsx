@@ -5,17 +5,20 @@ import Recorder from '@/components/Recorder';
 import TaskList from '@/components/TaskList';
 import ThemeToggle from '@/components/ThemeToggle';
 import ShareButton from '@/components/ShareButton';
+import CommandPalette from '@/components/CommandPalette';
+import AuthModal from '@/components/AuthModal';
+import ToastManager, { ToastMessage } from '@/components/ToastManager';
 import { Task } from '@/lib/types';
+import { User } from '@supabase/supabase-js';
 import { motion } from 'framer-motion';
+import { downloadICS } from '@/lib/calendar';
 
 const containerVariants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
-    transition: {
-      staggerChildren: 0.05
-    }
-  }
+    transition: { staggerChildren: 0.05 },
+  },
 };
 
 const itemVariants = {
@@ -23,8 +26,8 @@ const itemVariants = {
   show: {
     opacity: 1,
     y: 0,
-    transition: { type: "spring" as const, stiffness: 300, damping: 24 }
-  }
+    transition: { type: 'spring' as const, stiffness: 300, damping: 24 },
+  },
 };
 
 export default function Home() {
@@ -49,40 +52,58 @@ export default function Home() {
   const [currentDateText, setCurrentDateText] = useState<string>('');
   const [isScrolled, setIsScrolled] = useState<boolean>(false);
 
-  // Track scroll position for header blur refinement
+  // Modals & UI States
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [activeFilter, setActiveFilter] = useState<'all' | 'high_focus' | 'low_focus'>('all');
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const addToast = (type: 'info' | 'success' | 'warning' | 'error', title: string, message?: string) => {
+    const id = Date.now().toString();
+    setToasts((prev) => [...prev, { id, type, title, message }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4500);
+  };
+
+  const dismissToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  // Scroll tracking
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 15) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
+      setIsScrolled(window.scrollY > 15);
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Update current date/time text dynamically
+  // Live date/time display
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
-      const text = now.toLocaleDateString('en-US', {
-        weekday: 'long',
-        month: 'short',
-        day: 'numeric',
-      }) + ' • ' + now.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-      });
+      const text =
+        now.toLocaleDateString('en-US', {
+          weekday: 'long',
+          month: 'short',
+          day: 'numeric',
+        }) +
+        ' • ' +
+        now.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+        });
       setCurrentDateText(text);
     };
     updateTime();
-    const interval = setInterval(updateTime, 1000 * 30);
+    const interval = setInterval(updateTime, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch tasks from /api/tasks
+  // Fetch tasks
   const fetchTasks = async () => {
     try {
       const clientTimeParam = encodeURIComponent(new Date().toString());
@@ -94,8 +115,9 @@ export default function Home() {
       if (data.success) {
         setTasks(data.tasks);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching tasks:', err);
+      addToast('error', 'Network Warning', 'Could not reach server to sync tasks.');
     } finally {
       setIsLoading(false);
     }
@@ -105,29 +127,22 @@ export default function Home() {
     fetchTasks();
   }, [refreshKey]);
 
-  // Register Service Worker and Push Notifications
+  // Service worker registration
   useEffect(() => {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
       navigator.serviceWorker
         .register('/sw.js')
         .then((reg) => {
-          console.log('Service Worker registered with scope:', reg.scope);
-          import('@/lib/push-register').then(({ subscribeUserToPush }) => {
-            setTimeout(subscribeUserToPush, 1500);
-          });
+          console.log('PWA Service Worker registered:', reg.scope);
         })
-        .catch((err) => console.error('Service Worker registration failed:', err));
+        .catch((err) => console.error('PWA Service Worker failed:', err));
     }
   }, []);
 
-  // Document Title Badge Fallback
+  // Document title badge
   useEffect(() => {
     const todayCount = tasks.today.length + tasks.overdue.length;
-    if (todayCount > 0) {
-      document.title = `(${todayCount}) Spill`;
-    } else {
-      document.title = 'Spill';
-    }
+    document.title = todayCount > 0 ? `(${todayCount}) Spill` : 'Spill';
   }, [tasks]);
 
   const [quickTaskText, setQuickTaskText] = useState('');
@@ -141,9 +156,7 @@ export default function Home() {
     try {
       const response = await fetch('/api/tasks', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           description: quickTaskText.trim(),
           fuzzy_deadline: 'today',
@@ -151,55 +164,134 @@ export default function Home() {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to save manual task');
-      }
+      if (!response.ok) throw new Error('Failed to save manual task');
 
       setQuickTaskText('');
+      addToast('success', 'Task Added', 'Manual task saved successfully.');
       handleRefresh();
     } catch (err) {
       console.error('Quick add failed:', err);
-      alert('Failed to add task. Please check database connection.');
+      addToast('error', 'Save Failed', 'Check database connection.');
     } finally {
       setIsSubmittingQuickTask(false);
     }
   };
 
-  const handleRefresh = () => {
-    setRefreshKey((prev) => prev + 1);
-  };
+  const handleRefresh = () => setRefreshKey((prev) => prev + 1);
 
   const handleRecordingComplete = (result: { success: boolean; recording: any; tasks: any[] }) => {
     if (result.success) {
+      addToast('success', 'Voice Brain-Dump Parsed', `${result.tasks?.length || 0} tasks extracted.`);
       handleRefresh();
     }
   };
 
-  const totalPending = tasks.overdue.length + tasks.today.length + tasks.this_week.length + tasks.next_week.length + tasks.anytime.length;
+  // Command palette action dispatcher
+  const handleCommandAction = (action: string, payload?: any) => {
+    if (action === 'open_command_palette') {
+      setIsCommandPaletteOpen(true);
+    } else if (action === 'filter_quick_win') {
+      setActiveFilter('low_focus');
+      addToast('info', 'Filter Applied', 'Showing Low-Focus Quick Wins');
+    } else if (action === 'filter_deep_work') {
+      setActiveFilter('high_focus');
+      addToast('info', 'Filter Applied', 'Showing High-Focus Deep Work');
+    } else if (action === 'filter_all') {
+      setActiveFilter('all');
+      addToast('info', 'Filter Reset', 'Showing All Pending Tasks');
+    } else if (action === 'sync_calendar') {
+      const allPending = [
+        ...tasks.overdue,
+        ...tasks.today,
+        ...tasks.this_week,
+        ...tasks.next_week,
+        ...tasks.anytime,
+      ];
+      if (allPending.length > 0) {
+        downloadICS(allPending[0]);
+        addToast('success', 'Calendar Export', 'Downloaded task iCal file.');
+      } else {
+        addToast('info', 'Calendar Export', 'No pending tasks to export.');
+      }
+    } else if (action === 'toggle_theme') {
+      const themeToggleBtn = document.getElementById('theme-toggle-btn');
+      themeToggleBtn?.click();
+    }
+  };
+
+  const totalPending =
+    tasks.overdue.length +
+    tasks.today.length +
+    tasks.this_week.length +
+    tasks.next_week.length +
+    tasks.anytime.length;
 
   return (
-    <div className="min-h-screen bg-bg-base text-text-primary flex flex-col font-sans pb-12 relative overflow-hidden transition-colors duration-500">
+    <div className="min-h-screen bg-bg-base text-text-primary flex flex-col font-sans pb-16 relative overflow-hidden transition-colors duration-500 pt-[env(safe-area-inset-top)]">
+      {/* Toast Manager */}
+      <ToastManager toasts={toasts} onDismiss={dismissToast} />
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        user={user}
+        onUserChange={setUser}
+      />
+
+      {/* Command Palette */}
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onSelectAction={handleCommandAction}
+      />
+
       {/* Dynamic Ambient Background Layer */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[70vw] h-[70vw] rounded-full bg-orb-1 opacity-[0.12] dark:opacity-[0.18] blur-[100px] sm:blur-[140px] animate-blob-drift transition-colors duration-500" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[80vw] h-[80vw] rounded-full bg-orb-2 opacity-[0.12] dark:opacity-[0.18] blur-[100px] sm:blur-[140px] animate-blob-drift-delayed transition-colors duration-500" />
+        <div className="absolute top-[-10%] left-[-10%] w-[75vw] h-[75vw] rounded-full bg-orb-1 opacity-[0.14] blur-[120px] animate-blob-drift transition-colors duration-500" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[85vw] h-[85vw] rounded-full bg-orb-2 opacity-[0.14] blur-[120px] animate-blob-drift-delayed transition-colors duration-500" />
         <div className="absolute inset-0 noise-overlay" />
       </div>
 
       {/* Header / Premium Top Nav */}
-      <header className={`sticky top-0 z-50 w-full border-b backdrop-blur-xl flex items-center justify-between transition-all duration-300 ${
-        isScrolled 
-          ? 'px-6 py-3 bg-glass-surface border-glass-border/70 shadow-md' 
-          : 'px-6 py-4 bg-glass-surface/60 border-glass-border/30 shadow-xs'
-      }`}>
-        <div className="flex items-center space-x-2.5">
-          <span className="h-2.5 w-2.5 bg-accent rounded-full shadow-[0_0_8px_var(--accent)]" />
-          <h1 className="text-xl font-bold tracking-tight text-text-primary transition-colors duration-500">Spill</h1>
+      <header
+        className={`sticky top-0 z-40 w-full border-b backdrop-blur-2xl flex items-center justify-between transition-all duration-300 ${
+          isScrolled
+            ? 'px-6 py-3 glass-panel border-glass-border/70 shadow-lg'
+            : 'px-6 py-4 glass-panel border-glass-border/30 shadow-xs'
+        }`}
+      >
+        <div className="flex items-center space-x-3">
+          <span className="h-3 w-3 bg-accent rounded-full shadow-[0_0_12px_var(--accent)] animate-pulse" />
+          <h1 className="text-xl font-extrabold tracking-tight text-text-primary">Spill</h1>
+          <span className="text-[10px] micro-label bg-accent-soft text-accent px-2 py-0.5 rounded-md border border-accent/20">
+            PWA 3D
+          </span>
         </div>
-        
+
         <div className="flex items-center space-x-2">
+          {/* Cmd + K Search trigger */}
+          <button
+            onClick={() => setIsCommandPaletteOpen(true)}
+            className="p-2 glass-panel rounded-xl text-text-secondary hover:text-text-primary transition flex items-center space-x-1.5 cursor-pointer text-xs"
+            title="Command Palette (Cmd + K)"
+          >
+            <span>🔍</span>
+            <span className="hidden sm:inline font-mono text-[10px]">Cmd+K</span>
+          </button>
+
           <ShareButton tasks={tasks} />
           <ThemeToggle />
+
+          {/* Auth Button */}
+          <button
+            onClick={() => setIsAuthModalOpen(true)}
+            className="p-2 glass-panel rounded-xl text-text-secondary hover:text-accent transition cursor-pointer text-xs"
+            title="Account Auth"
+          >
+            {user ? '👤' : '🔑'}
+          </button>
+
           {totalPending > 0 ? (
             <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold bg-accent-soft text-accent border border-accent/20 shadow-xs">
               <span className="h-1.5 w-1.5 bg-accent rounded-full" />
@@ -217,14 +309,13 @@ export default function Home() {
       <motion.main
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
         className="flex-1 w-full max-w-lg mx-auto flex flex-col items-center justify-start px-4 pt-6 space-y-6 relative z-10"
       >
-        
         {/* Live Date/Time Display */}
-        <div className="w-full text-center py-2 px-4 bg-bg-elevated/70 border border-glass-border/30 rounded-2xl backdrop-blur-md shadow-xs">
-          <span className="text-xs font-semibold text-text-secondary tracking-wide">
-            🗓️ {currentDateText || 'Loading current time...'}
+        <div className="w-full text-center py-2 px-4 glass-panel glass-panel-specular rounded-2xl backdrop-blur-md shadow-xs">
+          <span className="text-xs font-semibold text-text-secondary tracking-wide font-mono">
+            🗓️ {currentDateText || 'Loading live time...'}
           </span>
         </div>
 
@@ -238,73 +329,80 @@ export default function Home() {
           >
             <motion.div
               variants={itemVariants}
-              whileHover={{ scale: 1.02 }}
-              className="bg-bg-elevated/80 border border-glass-border/30 rounded-2xl p-3 flex flex-col items-center justify-center backdrop-blur-md shadow-xs border-t-2 border-t-danger/70 hover:bg-bg-elevated cursor-default"
+              whileHover={{ scale: 1.03 }}
+              className="glass-panel glass-panel-specular rounded-2xl p-3 flex flex-col items-center justify-center border-t-2 border-t-danger/70 hover:bg-bg-elevated cursor-default"
             >
-              <span className="text-xl font-bold tracking-tight text-text-primary tabular-nums">
+              <span className="text-xl font-bold tracking-tight text-text-primary tabular-nums font-mono">
                 {tasks.today.length + tasks.overdue.length}
               </span>
-              <span className="text-[10px] text-text-secondary uppercase font-semibold tracking-wider mt-1">
-                Today
-              </span>
+              <span className="text-[10px] micro-label text-text-secondary mt-1">Today</span>
             </motion.div>
 
             <motion.div
               variants={itemVariants}
-              whileHover={{ scale: 1.02 }}
-              className="bg-bg-elevated/80 border border-glass-border/30 rounded-2xl p-3 flex flex-col items-center justify-center backdrop-blur-md shadow-xs border-t-2 border-t-accent/70 hover:bg-bg-elevated cursor-default"
+              whileHover={{ scale: 1.03 }}
+              className="glass-panel glass-panel-specular rounded-2xl p-3 flex flex-col items-center justify-center border-t-2 border-t-accent/70 hover:bg-bg-elevated cursor-default"
             >
-              <span className="text-xl font-bold tracking-tight text-text-primary tabular-nums">
+              <span className="text-xl font-bold tracking-tight text-text-primary tabular-nums font-mono">
                 {tasks.this_week.length}
               </span>
-              <span className="text-[10px] text-text-secondary uppercase font-semibold tracking-wider mt-1">
-                This Week
-              </span>
+              <span className="text-[10px] micro-label text-text-secondary mt-1">This Week</span>
             </motion.div>
 
             <motion.div
               variants={itemVariants}
-              whileHover={{ scale: 1.02 }}
-              className="bg-bg-elevated/80 border border-glass-border/30 rounded-2xl p-3 flex flex-col items-center justify-center backdrop-blur-md shadow-xs border-t-2 border-t-focus-high/70 hover:bg-bg-elevated cursor-default"
+              whileHover={{ scale: 1.03 }}
+              className="glass-panel glass-panel-specular rounded-2xl p-3 flex flex-col items-center justify-center border-t-2 border-t-focus-high/70 hover:bg-bg-elevated cursor-default"
             >
-              <span className="text-xl font-bold tracking-tight text-text-primary tabular-nums">
+              <span className="text-xl font-bold tracking-tight text-text-primary tabular-nums font-mono">
                 {tasks.next_week.length}
               </span>
-              <span className="text-[10px] text-text-secondary uppercase font-semibold tracking-wider mt-1">
-                Next Week
-              </span>
+              <span className="text-[10px] micro-label text-text-secondary mt-1">Next Week</span>
             </motion.div>
 
             <motion.div
               variants={itemVariants}
-              whileHover={{ scale: 1.02 }}
-              className="bg-bg-elevated/80 border border-glass-border/30 rounded-2xl p-3 flex flex-col items-center justify-center backdrop-blur-md shadow-xs border-t-2 border-t-text-secondary/35 hover:bg-bg-elevated cursor-default"
+              whileHover={{ scale: 1.03 }}
+              className="glass-panel glass-panel-specular rounded-2xl p-3 flex flex-col items-center justify-center border-t-2 border-t-text-secondary/40 hover:bg-bg-elevated cursor-default"
             >
-              <span className="text-xl font-bold tracking-tight text-text-primary tabular-nums">
+              <span className="text-xl font-bold tracking-tight text-text-primary tabular-nums font-mono">
                 {tasks.anytime.length}
               </span>
-              <span className="text-[10px] text-text-secondary uppercase font-semibold tracking-wider mt-1">
-                Anytime
-              </span>
+              <span className="text-[10px] micro-label text-text-secondary mt-1">Anytime</span>
             </motion.div>
           </motion.div>
         )}
 
-        {/* Voice Recorder Block */}
+        {/* 3D Voice Recorder Block */}
         <section className="w-full flex justify-center py-2">
-          <Recorder onRecordingComplete={handleRecordingComplete} />
+          <Recorder onRecordingComplete={handleRecordingComplete} onErrorToast={(t, m) => addToast('error', t, m)} />
         </section>
 
+        {/* Filter Indicator Banner */}
+        {activeFilter !== 'all' && (
+          <div className="w-full flex items-center justify-between px-3 py-1.5 bg-accent/10 border border-accent/30 rounded-xl text-xs">
+            <span className="micro-label text-accent">
+              Active Filter: {activeFilter === 'high_focus' ? '⚡ High Focus (Deep Work)' : '☕ Low Focus (Quick Wins)'}
+            </span>
+            <button
+              onClick={() => setActiveFilter('all')}
+              className="text-[10px] micro-label text-text-secondary hover:text-text-primary cursor-pointer underline"
+            >
+              Clear Filter
+            </button>
+          </div>
+        )}
+
         {/* Quick Add Inline Form */}
-        <form onSubmit={handleQuickAdd} className="w-full px-0.5">
-          <div className="relative flex items-center bg-bg-elevated/80 border border-glass-border/40 rounded-2xl p-1.5 focus-within:ring-2 focus-within:ring-accent/30 focus-within:border-glass-border/60 transition-all duration-300 shadow-xs">
+        <form onSubmit={handleQuickAdd} className="w-full">
+          <div className="relative flex items-center glass-panel rounded-2xl p-1.5 focus-within:ring-2 focus-within:ring-accent/40 transition-all duration-300 shadow-xs">
             <input
               type="text"
               value={quickTaskText}
               onChange={(e) => setQuickTaskText(e.target.value)}
               disabled={isSubmittingQuickTask}
               placeholder="Type a quick task..."
-              className="flex-1 bg-transparent px-3 py-1.5 text-sm text-text-primary placeholder-text-secondary/60 focus:outline-none disabled:opacity-50"
+              className="flex-1 bg-transparent px-3 py-1.5 text-sm text-text-primary placeholder-text-secondary/60 focus:outline-none disabled:opacity-50 font-medium"
             />
             <button
               type="submit"
@@ -330,7 +428,6 @@ export default function Home() {
           </div>
         </form>
 
-        {/* Theme-aware divider */}
         <div className="w-full border-t border-glass-border/30" />
 
         {/* Task List Block */}
@@ -338,14 +435,13 @@ export default function Home() {
           {isLoading ? (
             <div className="space-y-4 p-4 animate-pulse">
               <div className="h-3.5 w-24 bg-glass-border/40 rounded-lg mb-2" />
-              <div className="h-20 bg-bg-elevated/40 border border-glass-border/20 rounded-2xl" />
-              <div className="h-20 bg-bg-elevated/40 border border-glass-border/20 rounded-2xl" />
+              <div className="h-20 glass-panel rounded-2xl" />
+              <div className="h-20 glass-panel rounded-2xl" />
             </div>
           ) : (
-            <TaskList initialTasks={tasks} onRefreshNeeded={fetchTasks} />
+            <TaskList initialTasks={tasks} onRefreshNeeded={fetchTasks} activeFilter={activeFilter} />
           )}
         </section>
-
       </motion.main>
     </div>
   );

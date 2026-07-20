@@ -30,7 +30,7 @@ export async function POST(req: Request) {
 
     // If there are no pending tasks, we can skip sending pushes or send an encouraging push
     const messagePayload = JSON.stringify({
-      title: 'FocusFlow Reminder',
+      title: 'Spill Reminder',
       body: count > 0 
         ? `You have ${count} pending task${count > 1 ? 's' : ''} waiting. Ready to tackle them?` 
         : 'Your task list is completely clear. Have a great day!',

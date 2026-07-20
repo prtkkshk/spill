@@ -16,7 +16,7 @@ import type { Viewport } from "next";
 
 export const metadata: Metadata = {
   title: "Spill",
-  description: "Voice-to-Task Parser for ADHD Brains",
+  description: "Voice-to-Task Parser for Capturing Tasks On the Go",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,

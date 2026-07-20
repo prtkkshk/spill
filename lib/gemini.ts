@@ -1,6 +1,6 @@
 import { ParseResult } from './types';
 
-const getSystemInstruction = (dateContext: string) => `You are FocusFlow's parser. You receive a raw audio recording of a personal, unstructured brain-dump. Do two things: (1) transcribe the audio faithfully, (2) extract clear, actionable tasks from it.
+const getSystemInstruction = (dateContext: string) => `You are Spill's parser. You receive a raw audio recording of a personal, unstructured brain-dump. Do two things: (1) transcribe the audio faithfully, (2) extract clear, actionable tasks from it.
 
 Current Date Context: Today is ${dateContext}. Use this reference date to resolve relative date expressions (like 'tomorrow', 'Friday', 'next week') to determine the correct 'fuzzy_deadline' and calculate the exact date and day.
 

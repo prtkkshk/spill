@@ -1,12 +1,13 @@
 {
-  "name": "Spill",
+  "name": "Spill — Technical 3D Voice Task Parser",
   "short_name": "Spill",
-  "description": "Voice-to-Task Parser for ADHD Brains",
+  "description": "Voice-to-task parser for capturing tasks on the go. Press one button, talk through a brain-dump, get back clean actionable tasks.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0A0A0C",
-  "theme_color": "#0A0A0C",
+  "background_color": "#08080C",
+  "theme_color": "#08080C",
   "orientation": "portrait",
+  "scope": "/",
   "icons": [
     {
       "src": "/icons/icon-192.png",
@@ -19,6 +20,15 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Spill Voice Dump",
+      "short_name": "Record",
+      "description": "Start a voice brain-dump immediately",
+      "url": "/?action=record",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

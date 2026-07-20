@@ -1,24 +1,29 @@
-/* Import General Sans */
+/* Import Technical Fonts: General Sans & JetBrains Mono / Geist */
 @import url('https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700,800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 @import "tailwindcss";
 
 :root {
-  /* Default: Bold Minimal Dark Theme */
-  --bg-base: #0A0A0C;
-  --bg-elevated: #121318;
-  --glass-surface: rgba(18, 19, 24, 0.75);
-  --glass-border: rgba(255, 255, 255, 0.1);
+  /* Default: Ultra-Deep Awwwards Technical Dark Theme */
+  --bg-base: #08080C;
+  --bg-elevated: #101018;
+  --glass-surface: rgba(16, 16, 24, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-specular: rgba(255, 255, 255, 0.25);
   --accent: #6366F1;
   --accent-strong: #818CF8;
-  --accent-soft: rgba(99, 102, 241, 0.18);
-  --text-primary: #F3F4F6;
-  --text-secondary: #9CA3AF;
+  --accent-soft: rgba(99, 102, 241, 0.2);
+  --neon-purple: #8B5CF6;
+  --neon-emerald: #10B981;
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
   --success: #10B981;
   --focus-high: #8B5CF6;
   --danger: #EF4444;
   --orb-1: #4338CA;
-  --orb-2: #312E81;
+  --orb-2: #6D28D9;
+  --orb-3: #059669;
 
   --background: var(--bg-base);
   --foreground: var(--text-primary);
@@ -27,20 +32,24 @@
 /* System preferences fallback to Dark mode */
 @media (prefers-color-scheme: light) {
   :root {
-    --bg-base: #F9FAFB;
+    --bg-base: #F8FAFC;
     --bg-elevated: #FFFFFF;
-    --glass-surface: rgba(255, 255, 255, 0.8);
+    --glass-surface: rgba(255, 255, 255, 0.75);
     --glass-border: rgba(0, 0, 0, 0.08);
+    --glass-specular: rgba(0, 0, 0, 0.15);
     --accent: #4F46E5;
     --accent-strong: #4338CA;
-    --accent-soft: #EEF2FF;
-    --text-primary: #111827;
-    --text-secondary: #4B5563;
+    --accent-soft: rgba(79, 70, 229, 0.1);
+    --neon-purple: #7C3AED;
+    --neon-emerald: #059669;
+    --text-primary: #0F172A;
+    --text-secondary: #475569;
     --success: #059669;
     --focus-high: #7C3AED;
     --danger: #DC2626;
     --orb-1: #C7D2FE;
-    --orb-2: #E0E7FF;
+    --orb-2: #DDD6FE;
+    --orb-3: #A7F3D0;
 
     --background: var(--bg-base);
     --foreground: var(--text-primary);
@@ -49,54 +58,64 @@
 
 /* Explicit data-theme overrides */
 [data-theme="light"] {
-  --bg-base: #F9FAFB;
+  --bg-base: #F8FAFC;
   --bg-elevated: #FFFFFF;
-  --glass-surface: rgba(255, 255, 255, 0.8);
+  --glass-surface: rgba(255, 255, 255, 0.75);
   --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-specular: rgba(0, 0, 0, 0.15);
   --accent: #4F46E5;
   --accent-strong: #4338CA;
-  --accent-soft: #EEF2FF;
-  --text-primary: #111827;
-  --text-secondary: #4B5563;
+  --accent-soft: rgba(79, 70, 229, 0.1);
+  --neon-purple: #7C3AED;
+  --neon-emerald: #059669;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
   --success: #059669;
   --focus-high: #7C3AED;
   --danger: #DC2626;
   --orb-1: #C7D2FE;
-  --orb-2: #E0E7FF;
+  --orb-2: #DDD6FE;
+  --orb-3: #A7F3D0;
 
   --background: var(--bg-base);
   --foreground: var(--text-primary);
 }
 
 [data-theme="dark"] {
-  --bg-base: #0A0A0C;
-  --bg-elevated: #121318;
-  --glass-surface: rgba(18, 19, 24, 0.75);
-  --glass-border: rgba(255, 255, 255, 0.1);
+  --bg-base: #08080C;
+  --bg-elevated: #101018;
+  --glass-surface: rgba(16, 16, 24, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-specular: rgba(255, 255, 255, 0.25);
   --accent: #6366F1;
   --accent-strong: #818CF8;
-  --accent-soft: rgba(99, 102, 241, 0.18);
-  --text-primary: #F3F4F6;
-  --text-secondary: #9CA3AF;
+  --accent-soft: rgba(99, 102, 241, 0.2);
+  --neon-purple: #8B5CF6;
+  --neon-emerald: #10B981;
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
   --success: #10B981;
   --focus-high: #8B5CF6;
   --danger: #EF4444;
   --orb-1: #4338CA;
-  --orb-2: #312E81;
+  --orb-2: #6D28D9;
+  --orb-3: #059669;
 
   --background: var(--bg-base);
   --foreground: var(--text-primary);
 }
 
 @theme {
-  /* Dynamic colors using CSS variables */
   --color-bg-base: var(--bg-base);
   --color-bg-elevated: var(--bg-elevated);
   --color-glass-surface: var(--glass-surface);
   --color-glass-border: var(--glass-border);
+  --color-glass-specular: var(--glass-specular);
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);
   --color-accent-soft: var(--accent-soft);
+  --color-neon-purple: var(--neon-purple);
+  --color-neon-emerald: var(--neon-emerald);
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
   --color-success: var(--success);
@@ -104,20 +123,83 @@
   --color-danger: var(--danger);
   --color-orb-1: var(--orb-1);
   --color-orb-2: var(--orb-2);
+  --color-orb-3: var(--orb-3);
 
   --font-sans: "General Sans", var(--font-geist-sans), sans-serif;
+  --font-mono: "JetBrains Mono", var(--font-geist-mono), monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+  overflow-x: hidden;
 }
 
-/* Subtle ambient noise background overlay */
+/* Next-Gen Multi-layer Glassmorphism */
+.glass-panel {
+  background: var(--glass-surface);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+/* Specular Border Shimmer */
+.glass-panel-specular {
+  position: relative;
+}
+
+.glass-panel-specular::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.03) 40%, rgba(99, 102, 241, 0.3) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Dynamic Spotlight Shader Effect */
+.spotlight-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.spotlight-card::after {
+  content: '';
+  position: absolute;
+  top: var(--mouse-y, 50%);
+  left: var(--mouse-x, 50%);
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.05) 50%, transparent 80%);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.spotlight-card:hover::after {
+  opacity: 1;
+}
+
+/* Subtle Technical Noise Grain Overlay */
 .noise-overlay {
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-  opacity: 0.015;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.025;
+}
+
+/* Monospace Micro-Label Utilities */
+.micro-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
 }
 
 @keyframes blob-drift {
@@ -125,10 +207,10 @@ body {
     transform: translate(0px, 0px) scale(1);
   }
   33% {
-    transform: translate(30px, -50px) scale(1.05) rotate(0deg);
+    transform: translate(40px, -60px) scale(1.08) rotate(0deg);
   }
   66% {
-    transform: translate(-20px, 20px) scale(0.95) rotate(180deg);
+    transform: translate(-30px, 30px) scale(0.92) rotate(180deg);
   }
 }
 
@@ -137,22 +219,21 @@ body {
     transform: translate(0px, 0px) scale(1);
   }
   33% {
-    transform: translate(-40px, 30px) scale(0.95) rotate(0deg);
+    transform: translate(-50px, 40px) scale(0.92) rotate(0deg);
   }
   66% {
-    transform: translate(30px, -20px) scale(1.05) rotate(-180deg);
+    transform: translate(40px, -30px) scale(1.08) rotate(-180deg);
   }
 }
 
 .animate-blob-drift {
-  animation: blob-drift 25s ease-in-out infinite;
+  animation: blob-drift 22s ease-in-out infinite;
 }
 
 .animate-blob-drift-delayed {
-  animation: blob-drift-delayed 35s ease-in-out infinite;
+  animation: blob-drift-delayed 30s ease-in-out infinite;
 }
 
-/* Respect user's motion preferences */
 @media (prefers-reduced-motion: reduce) {
   .animate-blob-drift,
   .animate-blob-drift-delayed {

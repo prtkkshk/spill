@@ -52,7 +52,7 @@ Each milestone closes only when its Definition of Done (see `project_plan.md`) p
 - **DoD:** live HTTPS URL serves the app; full record→parse→list works on a real phone against prod env; keep-alive committed and scheduled.
 
 ## Milestone: Phase 7 — Testing Pass
-- [x] 🧑 Record a genuinely messy ADHD-style ramble; confirm the parser holds up — owner: Human
+- [x] 🧑 Record a genuinely messy, self-interrupting ramble; confirm the parser holds up — owner: Human
 - [x] 🧑 Test on iOS Safari and Android Chrome — owner: Human
 - [x] Test no-network mid-recording, empty state, all-completed, very long transcript — owner: QA
 - **DoD:** golden-set recordings parse acceptably; both mobile browsers complete the core flow; edge cases degrade gracefully with no uncaught errors.

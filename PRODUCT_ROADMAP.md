@@ -1,6 +1,6 @@
 # FocusFlow Product Roadmap & Candid Audit
 
-This document contains a candid UX, parsing, and architecture audit of FocusFlow, followed by a scoped roadmap for V1.1. It is designed to turn FocusFlow from a capture prototype into a highly robust, frictionless daily companion for ADHD brains.
+This document contains a candid UX, parsing, and architecture audit of FocusFlow, followed by a scoped roadmap for V1.1. It is designed to turn FocusFlow from a capture prototype into a highly robust, frictionless daily companion for capturing tasks on the go.
 
 ---
 
@@ -9,7 +9,7 @@ This document contains a candid UX, parsing, and architecture audit of FocusFlow
 ### 1.1 UX Friction Gaps (Record → Transcribe → Parse → Task List)
 1. **"Voice-Only" Capture Strain:**
    * **Location:** [app/page.tsx](file:///C:/Users/prtkk/Desktop/project/app/page.tsx), [components/Recorder.tsx](file:///C:/Users/prtkk/Desktop/project/components/Recorder.tsx)
-   * **Problem:** ADHD users often experience sudden task memory sparks in quiet environments (e.g., library, public transit, shared office, late at night). Forcing voice-only recording creates an immediate friction barrier, causing the user to abort capture. There is no inline quick-add text field.
+   * **Problem:** Users often experience sudden task memory sparks in quiet environments (e.g., library, public transit, shared office, late at night). Forcing voice-only recording creates an immediate friction barrier, causing the user to abort capture. There is no inline quick-add text field.
 2. **Typos & Parse Mistakes are Permanent:**
    * **Location:** [components/TaskList.tsx](file:///C:/Users/prtkk/Desktop/project/components/TaskList.tsx)
    * **Problem:** If Gemini mishears a word (e.g., "Sarah" becomes "share") or parses a task poorly, the user has **no way to edit** the task. The only options are checking it off (creating false database history) or leaving it broken.
@@ -34,7 +34,7 @@ This document contains a candid UX, parsing, and architecture audit of FocusFlow
 1. **No Rescheduling or Snoozing:**
    * **Problem:** Users cannot drag, swipe, or change task urgency categories (e.g., snoozing a Today task to Next Week) once captured.
 2. **Lack of Progress Indicators:**
-   * **Problem:** ADHD brains benefit heavily from visual rewards and progress momentum. The dashboard lacks a "completed today" counter or streak counter to provide immediate positive reinforcement.
+   * **Problem:** Users benefit heavily from visual rewards and progress momentum. The dashboard lacks a "completed today" counter or streak counter to provide immediate positive reinforcement.
 
 ### 1.4 Data Model & API Gaps
 1. **GET API Hides Completed Tasks:**

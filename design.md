@@ -9,7 +9,7 @@ Direction: Bold Minimal Dark (high contrast, crisp dark mode default, refined in
 
 - **Name:** Spill
 - **Tagline:** "Spill your thoughts, we'll sort them out."
-- **Core Value Proposition:** Single-tap voice brain-dump parser for ADHD brains, extracting actionable, categorized task lists with minimal input friction.
+- **Core Value Proposition:** Single-tap voice brain-dump parser for capturing tasks on the go, extracting actionable, categorized task lists with minimal input friction.
 
 ---
 
