@@ -37,19 +37,28 @@ export default function Recorder({ onRecordingComplete, onErrorToast, sessionTok
         setIsOfflineMode(false);
         // Flush offline queue when connection restored
         flushOfflineQueue(async (item) => {
-          const formData = new FormData();
-          formData.append('audio', item.blob, `offline_recording.webm`);
-          formData.append('duration', item.durationSeconds.toString());
-          formData.append('clientTime', item.clientTime);
+          try {
+            const formData = new FormData();
+            formData.append('audio', item.blob, `offline_recording.webm`);
+            formData.append('duration', item.durationSeconds.toString());
+            formData.append('clientTime', item.clientTime);
 
-          const res = await fetch('/api/process-recording', {
-            method: 'POST',
-            body: formData,
-          });
-          const data = await res.json();
-          if (res.ok && data.success) {
-            onRecordingComplete({ success: true, recording: data.recording, tasks: data.tasks });
-            return true;
+            const res = await fetch('/api/process-recording', {
+              method: 'POST',
+              body: formData,
+            });
+            let data: any = {};
+            try {
+              data = await res.json();
+            } catch {
+              return false;
+            }
+            if (res.ok && data.success) {
+              onRecordingComplete({ success: true, recording: data.recording, tasks: data.tasks });
+              return true;
+            }
+          } catch (err) {
+            console.error('Error auto-syncing offline recording:', err);
           }
           return false;
         });
@@ -176,11 +185,11 @@ export default function Recorder({ onRecordingComplete, onErrorToast, sessionTok
 
   const uploadAudio = async () => {
     setState('uploading');
-    try {
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
-      const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+    const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
 
-      // Check if offline
+    try {
+      // Check if offline before starting upload
       if (!navigator.onLine) {
         await queueOfflineRecording(audioBlob, secondsElapsed, new Date().toString());
         setState('success');
@@ -206,16 +215,43 @@ export default function Recorder({ onRecordingComplete, onErrorToast, sessionTok
         headers['Authorization'] = `Bearer ${sessionToken}`;
       }
 
-      const response = await fetch('/api/process-recording', {
-        method: 'POST',
-        headers,
-        body: formData,
-      });
+      let response: Response;
+      try {
+        response = await fetch('/api/process-recording', {
+          method: 'POST',
+          headers,
+          body: formData,
+        });
+      } catch (networkErr: any) {
+        // Handle fetch transport-level network errors (e.g. offline drop, server down, connection reset)
+        console.warn('Network fetch error during recording upload:', networkErr);
+        
+        // Save recording to offline queue so audio brain-dump is preserved
+        await queueOfflineRecording(audioBlob, secondsElapsed, new Date().toString());
+        setState('success');
+        if (onErrorToast) {
+          onErrorToast(
+            'Offline Queue',
+            'Connection lost. Recording saved locally and will auto-sync when online.'
+          );
+        }
+        setTimeout(() => {
+          setState('idle');
+          setSecondsElapsed(0);
+        }, 2500);
+        return;
+      }
 
-      const data = await response.json();
+      let data: any = {};
+      try {
+        data = await response.json();
+      } catch (jsonErr) {
+        console.error('Failed to parse server response JSON:', jsonErr);
+        throw new Error(`Server returned status ${response.status} (${response.statusText || 'Bad Response'})`);
+      }
 
       if (!response.ok) {
-        throw new Error(data.error || 'Server processing failed');
+        throw new Error(data.error || `Server processing failed (${response.status})`);
       }
 
       soundEngine.playCheckoffChime();

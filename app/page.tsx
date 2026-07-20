@@ -143,12 +143,25 @@ export default function Home() {
         headers['Authorization'] = `Bearer ${sessionToken}`;
       }
 
-      const response = await fetch(`/api/tasks?clientTime=${clientTimeParam}`, { headers });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Server status ${response.status}`);
+      let response: Response;
+      try {
+        response = await fetch(`/api/tasks?clientTime=${clientTimeParam}`, { headers });
+      } catch (networkErr: any) {
+        console.warn('Network error fetching tasks:', networkErr);
+        addToast('warning', 'Offline Mode', 'Could not connect to server. Showing cached tasks.');
+        return;
       }
-      const data = await response.json();
+
+      let data: any = {};
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error(`Server returned status ${response.status}`);
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error || `Server status ${response.status}`);
+      }
       if (data.success) {
         setTasks(data.tasks);
       }
