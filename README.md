@@ -1,5 +1,8 @@
 # Spill: Voice-to-Task Parser for Capturing Tasks On the Go
 
+🌐 **Live Web Application:** [https://spillonthego.vercel.app](https://spillonthego.vercel.app)  
+📦 **GitHub Repository:** [https://github.com/prtkkshk/spill](https://github.com/prtkkshk/spill)
+
 Spill is a mobile-web-first, single-user Progressive Web App (PWA) designed to solve task-capture friction on the go. It allows users to record a messy, unstructured voice thought for up to 3 minutes and instantly transcribes and extracts clean, action-oriented, verb-first tasks grouped by deadline and energy level.
 
 ---
