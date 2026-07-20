@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSupabaseService } from '@/lib/supabase';
+import { getSupabaseService, getAuthUser } from '@/lib/supabase';
 import { Task } from '@/lib/types';
 
 // GET: fetch all pending tasks grouped by Overdue, Today, This Week, and Anytime
@@ -7,6 +7,7 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const clientTime = searchParams.get('clientTime');
+    const user = await getAuthUser(req);
 
     // Resolve date boundary context
     let todayBoundary = new Date();
@@ -30,21 +31,36 @@ export async function GET(req: Request) {
 
     const supabase = getSupabaseService();
 
-    const { data: tasks, error } = await supabase
+    let query = supabase
       .from('tasks')
       .select('*')
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false });
+      .eq('status', 'pending');
+
+    if (user) {
+      query = query.or(`user_id.eq.${user.id},user_id.is.null`);
+    } else {
+      query = query.is('user_id', null);
+    }
+
+    const { data: tasks, error } = await query.order('created_at', { ascending: false });
 
     if (error) {
       console.error('Failed to fetch tasks:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    const { data: completedTasks, error: completedError } = await supabase
+    let completedQuery = supabase
       .from('tasks')
       .select('*')
-      .eq('status', 'completed')
+      .eq('status', 'completed');
+
+    if (user) {
+      completedQuery = completedQuery.or(`user_id.eq.${user.id},user_id.is.null`);
+    } else {
+      completedQuery = completedQuery.is('user_id', null);
+    }
+
+    const { data: completedTasks, error: completedError } = await completedQuery
       .order('completed_at', { ascending: false })
       .limit(10);
 
@@ -100,6 +116,7 @@ export async function GET(req: Request) {
 // POST: create a task manually
 export async function POST(req: Request) {
   try {
+    const user = await getAuthUser(req);
     const { description, fuzzy_deadline, energy_level, context } = await req.json();
 
     if (!description || typeof description !== 'string') {
@@ -116,6 +133,7 @@ export async function POST(req: Request) {
         fuzzy_deadline: fuzzy_deadline || 'today',
         energy_level: energy_level || 'low_focus',
         context: context || null,
+        user_id: user ? user.id : null,
       })
       .select()
       .single();
@@ -138,6 +156,7 @@ export async function POST(req: Request) {
 // PATCH: update a task (complete, edit description, deadline, or energy level)
 export async function PATCH(req: Request) {
   try {
+    const user = await getAuthUser(req);
     const { id, description, fuzzy_deadline, energy_level, status } = await req.json();
 
     if (!id) {
@@ -169,12 +188,18 @@ export async function PATCH(req: Request) {
 
     const supabase = getSupabaseService();
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('tasks')
       .update(updatePayload)
-      .eq('id', id)
-      .select()
-      .single();
+      .eq('id', id);
+
+    if (user) {
+      query = query.or(`user_id.eq.${user.id},user_id.is.null`);
+    } else {
+      query = query.is('user_id', null);
+    }
+
+    const { data, error } = await query.select().single();
 
     if (error) {
       console.error('Failed to update task:', error);
@@ -194,16 +219,25 @@ export async function PATCH(req: Request) {
 // DELETE: remove a task permanently or bulk clear completed tasks
 export async function DELETE(req: Request) {
   try {
+    const user = await getAuthUser(req);
     const body = await req.json();
     const { id, scope } = body;
 
     const supabase = getSupabaseService();
 
     if (scope === 'completed') {
-      const { error } = await supabase
+      let clearQuery = supabase
         .from('tasks')
         .delete()
         .eq('status', 'completed');
+
+      if (user) {
+        clearQuery = clearQuery.or(`user_id.eq.${user.id},user_id.is.null`);
+      } else {
+        clearQuery = clearQuery.is('user_id', null);
+      }
+
+      const { error } = await clearQuery;
 
       if (error) {
         console.error('Failed to clear completed tasks:', error);
@@ -217,10 +251,18 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: 'Missing task id or scope' }, { status: 400 });
     }
 
-    const { error } = await supabase
+    let deleteQuery = supabase
       .from('tasks')
       .delete()
       .eq('id', id);
+
+    if (user) {
+      deleteQuery = deleteQuery.or(`user_id.eq.${user.id},user_id.is.null`);
+    } else {
+      deleteQuery = deleteQuery.is('user_id', null);
+    }
+
+    const { error } = await deleteQuery;
 
     if (error) {
       console.error('Failed to delete task:', error);
@@ -236,3 +278,4 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }
+

@@ -23,3 +23,23 @@ export const getSupabaseService = () => {
     },
   });
 };
+
+// Helper to extract and verify authenticated user from request Authorization header
+export async function getAuthUser(req: Request) {
+  try {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return null;
+    }
+    const token = authHeader.substring(7).trim();
+    if (!token) return null;
+
+    const supabase = getSupabaseService();
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) return null;
+    return user;
+  } catch (err) {
+    return null;
+  }
+}
+

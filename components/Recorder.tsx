@@ -10,11 +10,12 @@ import { queueOfflineRecording, flushOfflineQueue } from '@/lib/offline-queue';
 interface RecorderProps {
   onRecordingComplete: (result: { success: boolean; recording: any; tasks: any[] }) => void;
   onErrorToast?: (title: string, message?: string) => void;
+  sessionToken?: string | null;
 }
 
 type RecordState = 'idle' | 'explaining' | 'recording' | 'uploading' | 'parsing' | 'success' | 'error';
 
-export default function Recorder({ onRecordingComplete, onErrorToast }: RecorderProps) {
+export default function Recorder({ onRecordingComplete, onErrorToast, sessionToken }: RecorderProps) {
   const [state, setState] = useState<RecordState>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [secondsElapsed, setSecondsElapsed] = useState<number>(0);
@@ -200,8 +201,14 @@ export default function Recorder({ onRecordingComplete, onErrorToast }: Recorder
 
       setState('parsing');
 
+      const headers: Record<string, string> = {};
+      if (sessionToken) {
+        headers['Authorization'] = `Bearer ${sessionToken}`;
+      }
+
       const response = await fetch('/api/process-recording', {
         method: 'POST',
+        headers,
         body: formData,
       });
 

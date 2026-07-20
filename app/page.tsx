@@ -13,6 +13,8 @@ import { User } from '@supabase/supabase-js';
 import { motion } from 'framer-motion';
 import { downloadICS } from '@/lib/calendar';
 
+import { supabase } from '@/lib/supabase';
+
 const containerVariants = {
   hidden: { opacity: 0 },
   show: {
@@ -56,8 +58,24 @@ export default function Home() {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<'all' | 'high_focus' | 'low_focus'>('all');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  // Listen for Supabase Auth changes
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null);
+      setSessionToken(session?.access_token || null);
+    });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user || null);
+      setSessionToken(session?.access_token || null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const addToast = (type: 'info' | 'success' | 'warning' | 'error', title: string, message?: string) => {
     const id = Date.now().toString();
@@ -107,7 +125,12 @@ export default function Home() {
   const fetchTasks = async () => {
     try {
       const clientTimeParam = encodeURIComponent(new Date().toString());
-      const response = await fetch(`/api/tasks?clientTime=${clientTimeParam}`);
+      const headers: Record<string, string> = {};
+      if (sessionToken) {
+        headers['Authorization'] = `Bearer ${sessionToken}`;
+      }
+
+      const response = await fetch(`/api/tasks?clientTime=${clientTimeParam}`, { headers });
       if (!response.ok) {
         throw new Error('Failed to fetch tasks');
       }
@@ -125,7 +148,7 @@ export default function Home() {
 
   useEffect(() => {
     fetchTasks();
-  }, [refreshKey]);
+  }, [refreshKey, sessionToken]);
 
   // Service worker registration
   useEffect(() => {
@@ -154,9 +177,14 @@ export default function Home() {
 
     setIsSubmittingQuickTask(true);
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (sessionToken) {
+        headers['Authorization'] = `Bearer ${sessionToken}`;
+      }
+
       const response = await fetch('/api/tasks', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           description: quickTaskText.trim(),
           fuzzy_deadline: 'today',
@@ -375,7 +403,11 @@ export default function Home() {
 
         {/* 3D Voice Recorder Block */}
         <section className="w-full flex justify-center py-2">
-          <Recorder onRecordingComplete={handleRecordingComplete} onErrorToast={(t, m) => addToast('error', t, m)} />
+          <Recorder
+            onRecordingComplete={handleRecordingComplete}
+            onErrorToast={(t, m) => addToast('error', t, m)}
+            sessionToken={sessionToken}
+          />
         </section>
 
         {/* Filter Indicator Banner */}
@@ -439,7 +471,12 @@ export default function Home() {
               <div className="h-20 glass-panel rounded-2xl" />
             </div>
           ) : (
-            <TaskList initialTasks={tasks} onRefreshNeeded={fetchTasks} activeFilter={activeFilter} />
+            <TaskList
+              initialTasks={tasks}
+              onRefreshNeeded={fetchTasks}
+              activeFilter={activeFilter}
+              sessionToken={sessionToken}
+            />
           )}
         </section>
       </motion.main>

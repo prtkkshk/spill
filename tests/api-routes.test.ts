@@ -9,6 +9,8 @@ const mockInsert = vi.fn();
 const mockUpdate = vi.fn();
 const mockDelete = vi.fn();
 const mockEq = vi.fn();
+const mockOr = vi.fn();
+const mockIs = vi.fn();
 const mockOrder = vi.fn();
 const mockMaybeSingle = vi.fn();
 const mockSingle = vi.fn();
@@ -21,6 +23,8 @@ vi.mock('@/lib/supabase', () => {
       update: mockUpdate,
       delete: mockDelete,
       eq: mockEq,
+      or: mockOr,
+      is: mockIs,
       order: mockOrder,
       maybeSingle: mockMaybeSingle,
       single: mockSingle,
@@ -29,6 +33,7 @@ vi.mock('@/lib/supabase', () => {
   return {
     getSupabaseService: () => mockClient,
     supabase: mockClient,
+    getAuthUser: vi.fn().mockResolvedValue(null),
   };
 });
 
@@ -52,9 +57,11 @@ describe('API Route Unit Tests', () => {
 
       mockSelect.mockReturnValue({
         eq: mockEq.mockReturnValue({
-          order: mockOrder.mockReturnValue({
-            limit: vi.fn().mockResolvedValue({ data: [], error: null }),
-            then: (onfulfilled: any) => Promise.resolve({ data: mockTasks, error: null }).then(onfulfilled)
+          is: mockIs.mockReturnValue({
+            order: mockOrder.mockReturnValue({
+              limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+              then: (onfulfilled: any) => Promise.resolve({ data: mockTasks, error: null }).then(onfulfilled)
+            }),
           }),
         }),
       });
@@ -90,9 +97,11 @@ describe('API Route Unit Tests', () => {
 
       mockSelect.mockReturnValue({
         eq: mockEq.mockReturnValue({
-          order: mockOrder.mockReturnValue({
-            limit: vi.fn().mockResolvedValue({ data: [], error: null }),
-            then: (onfulfilled: any) => Promise.resolve({ data: mockTasks, error: null }).then(onfulfilled)
+          is: mockIs.mockReturnValue({
+            order: mockOrder.mockReturnValue({
+              limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+              then: (onfulfilled: any) => Promise.resolve({ data: mockTasks, error: null }).then(onfulfilled)
+            }),
           }),
         }),
       });
@@ -122,8 +131,10 @@ describe('API Route Unit Tests', () => {
 
       mockUpdate.mockReturnValue({
         eq: mockEq.mockReturnValue({
-          select: vi.fn().mockReturnValue({
-            single: mockSingle.mockResolvedValue({ data: mockCompletedTask, error: null }),
+          is: mockIs.mockReturnValue({
+            select: vi.fn().mockReturnValue({
+              single: mockSingle.mockResolvedValue({ data: mockCompletedTask, error: null }),
+            }),
           }),
         }),
       });
@@ -249,7 +260,9 @@ describe('API Route Unit Tests', () => {
       } as Request;
 
       mockDelete.mockReturnValue({
-        eq: mockEq.mockResolvedValue({ error: null }),
+        eq: mockEq.mockReturnValue({
+          is: mockIs.mockResolvedValue({ error: null }),
+        }),
       });
 
       const response = await deleteTasksRoute(mockReq);
@@ -266,7 +279,9 @@ describe('API Route Unit Tests', () => {
       } as Request;
 
       mockDelete.mockReturnValue({
-        eq: mockEq.mockResolvedValue({ error: null }),
+        eq: mockEq.mockReturnValue({
+          is: mockIs.mockResolvedValue({ error: null }),
+        }),
       });
 
       const response = await deleteTasksRoute(mockReq);

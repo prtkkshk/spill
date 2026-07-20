@@ -47,9 +47,13 @@ describe('Recorder Component Tests', () => {
       ],
     };
 
-    navigator.mediaDevices = {
-      getUserMedia: vi.fn().mockResolvedValue(mockStream),
-    } as any;
+    Object.defineProperty(navigator, 'mediaDevices', {
+      value: {
+        getUserMedia: vi.fn().mockResolvedValue(mockStream),
+      },
+      writable: true,
+      configurable: true,
+    });
   });
 
   afterEach(() => {

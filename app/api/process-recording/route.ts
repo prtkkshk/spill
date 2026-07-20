@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { getSupabaseService } from '@/lib/supabase';
+import { getSupabaseService, getAuthUser } from '@/lib/supabase';
 import { parseAudioBrainDump } from '@/lib/gemini';
 
 export async function POST(req: Request) {
   try {
+    const user = await getAuthUser(req);
     const formData = await req.formData();
     const audioFile = formData.get('audio') as File | null;
     const durationStr = formData.get('duration') as string | null;
@@ -37,6 +38,7 @@ export async function POST(req: Request) {
       .insert({
         transcript: parseResult.transcript || 'No transcript generated',
         duration_seconds: durationSeconds,
+        user_id: user ? user.id : null,
       })
       .select('id, transcript, duration_seconds, created_at')
       .single();
@@ -60,6 +62,7 @@ export async function POST(req: Request) {
         specific_deadline: task.specific_deadline || null,
         raw_transcript: parseResult.transcript,
         recording_id: recordingId,
+        user_id: user ? user.id : null,
       }));
 
       const { data: tasksData, error: tasksError } = await supabase

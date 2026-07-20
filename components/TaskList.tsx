@@ -18,12 +18,14 @@ interface TaskListProps {
   };
   onRefreshNeeded: () => void;
   activeFilter?: 'all' | 'high_focus' | 'low_focus';
+  sessionToken?: string | null;
 }
 
 export default function TaskList({
   initialTasks,
   onRefreshNeeded,
   activeFilter = 'all',
+  sessionToken,
 }: TaskListProps) {
   const [localTasks, setLocalTasks] = useState(initialTasks);
   const [completingIds, setCompletingIds] = useState<Set<string>>(new Set());
@@ -87,9 +89,12 @@ export default function TaskList({
     setEditingId(null);
 
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (sessionToken) headers['Authorization'] = `Bearer ${sessionToken}`;
+
       const response = await fetch('/api/tasks', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           id: taskId,
           description: editDesc.trim(),
@@ -119,9 +124,12 @@ export default function TaskList({
     }));
 
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (sessionToken) headers['Authorization'] = `Bearer ${sessionToken}`;
+
       const response = await fetch('/api/tasks', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ id: taskId }),
       });
 
@@ -144,9 +152,12 @@ export default function TaskList({
     setIsClearingCompleted(false);
 
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (sessionToken) headers['Authorization'] = `Bearer ${sessionToken}`;
+
       const response = await fetch('/api/tasks', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ scope: 'completed' }),
       });
       if (!response.ok) throw new Error('Failed to clear completed tasks');
@@ -179,9 +190,12 @@ export default function TaskList({
       }));
 
       try {
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (sessionToken) headers['Authorization'] = `Bearer ${sessionToken}`;
+
         await fetch('/api/tasks', {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({ id: taskId, status: 'pending' }),
         });
         onRefreshNeeded();
@@ -211,9 +225,12 @@ export default function TaskList({
         });
 
         try {
+          const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+          if (sessionToken) headers['Authorization'] = `Bearer ${sessionToken}`;
+
           await fetch('/api/tasks', {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify({ id: taskId, status: 'completed' }),
           });
           onRefreshNeeded();
