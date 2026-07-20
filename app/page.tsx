@@ -64,14 +64,27 @@ export default function Home() {
 
   // Listen for Supabase Auth changes
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user || null);
-      setSessionToken(session?.access_token || null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || !session) {
+        setUser(null);
+        setSessionToken(null);
+      } else {
+        setUser(session.user);
+        setSessionToken(session.access_token);
+      }
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user || null);
-      setSessionToken(session?.access_token || null);
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error || !session) {
+        setUser(null);
+        setSessionToken(null);
+        if (error) {
+          supabase.auth.signOut();
+        }
+      } else {
+        setUser(session.user);
+        setSessionToken(session.access_token);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -132,7 +145,8 @@ export default function Home() {
 
       const response = await fetch(`/api/tasks?clientTime=${clientTimeParam}`, { headers });
       if (!response.ok) {
-        throw new Error('Failed to fetch tasks');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Server status ${response.status}`);
       }
       const data = await response.json();
       if (data.success) {
@@ -140,7 +154,7 @@ export default function Home() {
       }
     } catch (err: any) {
       console.error('Error fetching tasks:', err);
-      addToast('error', 'Network Warning', 'Could not reach server to sync tasks.');
+      addToast('error', 'Sync Warning', err.message || 'Could not sync tasks with server.');
     } finally {
       setIsLoading(false);
     }
