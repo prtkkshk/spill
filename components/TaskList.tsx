@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Task } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import TaskCard from './TaskCard';
+import { getDeviceIdHeader } from '@/lib/deviceId';
 
 type GroupKey = 'overdue' | 'today' | 'this_week' | 'next_week' | 'anytime' | 'completed';
 
@@ -33,6 +34,15 @@ export default function TaskList({
   useEffect(() => {
     setLocalTasks(initialTasks);
   }, [initialTasks]);
+
+  // Persist optimistic local task changes to cache
+  useEffect(() => {
+    try {
+      localStorage.setItem('spill_tasks_cache', JSON.stringify(localTasks));
+    } catch (e) {
+      // Ignore quota error
+    }
+  }, [localTasks]);
 
   // Inline Edit states
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -89,7 +99,10 @@ export default function TaskList({
     setEditingId(null);
 
     try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      const headers: Record<string, string> = { 
+        'Content-Type': 'application/json',
+        ...getDeviceIdHeader() 
+      };
       if (sessionToken) headers['Authorization'] = `Bearer ${sessionToken}`;
 
       const response = await fetch('/api/tasks', {
@@ -124,7 +137,10 @@ export default function TaskList({
     }));
 
     try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      const headers: Record<string, string> = { 
+        'Content-Type': 'application/json',
+        ...getDeviceIdHeader()
+      };
       if (sessionToken) headers['Authorization'] = `Bearer ${sessionToken}`;
 
       const response = await fetch('/api/tasks', {
@@ -152,7 +168,10 @@ export default function TaskList({
     setIsClearingCompleted(false);
 
     try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      const headers: Record<string, string> = { 
+        'Content-Type': 'application/json',
+        ...getDeviceIdHeader()
+      };
       if (sessionToken) headers['Authorization'] = `Bearer ${sessionToken}`;
 
       const response = await fetch('/api/tasks', {
@@ -190,7 +209,10 @@ export default function TaskList({
       }));
 
       try {
-        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        const headers: Record<string, string> = { 
+          'Content-Type': 'application/json',
+          ...getDeviceIdHeader()
+        };
         if (sessionToken) headers['Authorization'] = `Bearer ${sessionToken}`;
 
         await fetch('/api/tasks', {
@@ -225,7 +247,10 @@ export default function TaskList({
         });
 
         try {
-          const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+          const headers: Record<string, string> = { 
+            'Content-Type': 'application/json',
+            ...getDeviceIdHeader()
+          };
           if (sessionToken) headers['Authorization'] = `Bearer ${sessionToken}`;
 
           await fetch('/api/tasks', {

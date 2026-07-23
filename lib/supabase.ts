@@ -43,3 +43,15 @@ export async function getAuthUser(req: Request) {
   }
 }
 
+// Helper to extract device_id header from request
+export function getDeviceIdFromReq(req: Request): string | null {
+  try {
+    const deviceId = req.headers.get('x-device-id');
+    if (!deviceId || typeof deviceId !== 'string') return null;
+    return deviceId.trim() || null;
+  } catch (err) {
+    return null;
+  }
+}
+
+

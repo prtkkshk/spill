@@ -14,6 +14,7 @@ import { motion } from 'framer-motion';
 import { downloadICS } from '@/lib/calendar';
 
 import { supabase } from '@/lib/supabase';
+import { getDeviceIdHeader } from '@/lib/deviceId';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -134,11 +135,36 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
+  // Helper to load tasks from local storage cache
+  const loadLocalTasksCache = () => {
+    try {
+      const cached = localStorage.getItem('spill_tasks_cache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && typeof parsed === 'object') {
+          setTasks((prev) => ({
+            ...prev,
+            ...parsed,
+          }));
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load tasks from localStorage cache:', e);
+    }
+  };
+
+  // Initial load from localStorage cache
+  useEffect(() => {
+    loadLocalTasksCache();
+  }, []);
+
   // Fetch tasks
   const fetchTasks = async () => {
     try {
       const clientTimeParam = encodeURIComponent(new Date().toString());
-      const headers: Record<string, string> = {};
+      const headers: Record<string, string> = {
+        ...getDeviceIdHeader(),
+      };
       if (sessionToken) {
         headers['Authorization'] = `Bearer ${sessionToken}`;
       }
@@ -148,6 +174,7 @@ export default function Home() {
         response = await fetch(`/api/tasks?clientTime=${clientTimeParam}`, { headers });
       } catch (networkErr: any) {
         console.warn('Network error fetching tasks:', networkErr);
+        loadLocalTasksCache();
         addToast('warning', 'Offline Mode', 'Could not connect to server. Showing cached tasks.');
         return;
       }
@@ -164,10 +191,21 @@ export default function Home() {
       }
       if (data.success) {
         setTasks(data.tasks);
+        try {
+          localStorage.setItem('spill_tasks_cache', JSON.stringify(data.tasks));
+        } catch (e) {
+          console.warn('Failed to save tasks to localStorage cache:', e);
+        }
       }
     } catch (err: any) {
       console.error('Error fetching tasks:', err);
-      addToast('error', 'Sync Warning', err.message || 'Could not sync tasks with server.');
+      loadLocalTasksCache();
+      const msg = err.message || '';
+      if (msg.includes('fetch') || msg.includes('Network') || msg.includes('Server status 5')) {
+        addToast('warning', 'Offline Mode', 'Could not connect to server. Showing cached tasks.');
+      } else {
+        addToast('error', 'Sync Warning', msg || 'Could not sync tasks with server.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -204,7 +242,10 @@ export default function Home() {
 
     setIsSubmittingQuickTask(true);
     try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...getDeviceIdHeader(),
+      };
       if (sessionToken) {
         headers['Authorization'] = `Bearer ${sessionToken}`;
       }

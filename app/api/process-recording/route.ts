@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getSupabaseService, getAuthUser } from '@/lib/supabase';
+import { getSupabaseService, getAuthUser, getDeviceIdFromReq } from '@/lib/supabase';
 import { parseAudioBrainDump } from '@/lib/gemini';
 
 export async function POST(req: Request) {
   try {
     const user = await getAuthUser(req);
+    const deviceId = getDeviceIdFromReq(req);
     const formData = await req.formData();
     const audioFile = formData.get('audio') as File | null;
     const durationStr = formData.get('duration') as string | null;
@@ -37,6 +38,7 @@ export async function POST(req: Request) {
       transcript: parseResult.transcript || 'No transcript generated',
       duration_seconds: durationSeconds,
       user_id: user ? user.id : null,
+      device_id: deviceId || null,
     };
 
     let { data: recordingData, error: recordingError } = await supabase
@@ -46,12 +48,22 @@ export async function POST(req: Request) {
       .single();
 
     if (recordingError && recordingError.code === '42703') {
-      delete recPayload.user_id;
-      const fallbackRec = await supabase
+      delete recPayload.device_id;
+      let fallbackRec = await supabase
         .from('recordings')
         .insert(recPayload)
         .select('id, transcript, duration_seconds, created_at')
         .single();
+
+      if (fallbackRec.error && fallbackRec.error.code === '42703') {
+        delete recPayload.user_id;
+        fallbackRec = await supabase
+          .from('recordings')
+          .insert(recPayload)
+          .select('id, transcript, duration_seconds, created_at')
+          .single();
+      }
+
       recordingData = fallbackRec.data;
       recordingError = fallbackRec.error;
     }
@@ -76,6 +88,7 @@ export async function POST(req: Request) {
         raw_transcript: parseResult.transcript,
         recording_id: recordingId,
         user_id: user ? user.id : null,
+        device_id: deviceId || null,
       }));
 
       let { data: tasksData, error: tasksError } = await supabase
@@ -84,8 +97,14 @@ export async function POST(req: Request) {
         .select();
 
       if (tasksError && tasksError.code === '42703') {
-        const fallbackTasks = tasksToInsert.map(({ user_id, ...rest }) => rest);
-        const retryRes = await supabase.from('tasks').insert(fallbackTasks).select();
+        const fallbackTasks = tasksToInsert.map(({ device_id, ...rest }) => rest);
+        let retryRes = await supabase.from('tasks').insert(fallbackTasks).select();
+        
+        if (retryRes.error && retryRes.error.code === '42703') {
+          const fallbackTasksNoUser = fallbackTasks.map(({ user_id, ...rest }) => rest);
+          retryRes = await supabase.from('tasks').insert(fallbackTasksNoUser).select();
+        }
+
         tasksData = retryRes.data;
         tasksError = retryRes.error;
       }

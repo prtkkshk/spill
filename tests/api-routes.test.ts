@@ -34,6 +34,7 @@ vi.mock('@/lib/supabase', () => {
     getSupabaseService: () => mockClient,
     supabase: mockClient,
     getAuthUser: vi.fn().mockResolvedValue(null),
+    getDeviceIdFromReq: vi.fn().mockReturnValue(null),
   };
 });
 
@@ -113,6 +114,33 @@ describe('API Route Unit Tests', () => {
       expect(json.success).toBe(true);
       expect(json.tasks.overdue).toHaveLength(2); // Task 1 (today but yesterday) and Task 2 (this_week but last week)
       expect(json.tasks.today).toHaveLength(1); // Task 3 (today and today)
+    });
+
+    it('strictly isolates query to authenticated user id without fetching unassigned tasks', async () => {
+      const { getAuthUser } = await import('@/lib/supabase');
+      vi.mocked(getAuthUser).mockResolvedValueOnce({ id: 'user-777', email: 'test@example.com' } as any);
+
+      const mockReq = {
+        url: 'http://localhost/api/tasks',
+        headers: new Headers(),
+      } as unknown as Request;
+
+      const mockEqUser = vi.fn().mockReturnValue({
+        order: mockOrder.mockReturnValue({
+          limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+          then: (onfulfilled: any) => Promise.resolve({ data: [], error: null }).then(onfulfilled),
+        }),
+      });
+
+      mockSelect.mockReturnValue({
+        eq: mockEq.mockReturnValue({
+          eq: mockEqUser,
+        }),
+      });
+
+      await getTasksRoute(mockReq);
+      expect(mockEq).toHaveBeenCalledWith('status', 'pending');
+      expect(mockEqUser).toHaveBeenCalledWith('user_id', 'user-777');
     });
   });
 

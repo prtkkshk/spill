@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSupabaseService, getAuthUser } from '@/lib/supabase';
+import { getSupabaseService, getAuthUser, getDeviceIdFromReq } from '@/lib/supabase';
 import { Task } from '@/lib/types';
 
 // GET: fetch all pending tasks grouped by Overdue, Today, This Week, and Anytime
@@ -8,6 +8,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const clientTime = searchParams.get('clientTime');
     const user = await getAuthUser(req);
+    const deviceId = getDeviceIdFromReq(req);
 
     // Resolve date boundary context
     let todayBoundary = new Date();
@@ -31,13 +32,25 @@ export async function GET(req: Request) {
 
     const supabase = getSupabaseService();
 
+    // Auto-claim device tasks when user is authenticated
+    if (user && deviceId) {
+      try {
+        await supabase.from('tasks').update({ user_id: user.id }).is('user_id', null).eq('device_id', deviceId);
+        await supabase.from('recordings').update({ user_id: user.id }).is('user_id', null).eq('device_id', deviceId);
+      } catch (claimErr) {
+        // Silently skip if table schema doesn't match
+      }
+    }
+
     let query = supabase
       .from('tasks')
       .select('*')
       .eq('status', 'pending');
 
     if (user) {
-      query = query.or(`user_id.eq.${user.id},user_id.is.null`);
+      query = query.eq('user_id', user.id);
+    } else if (deviceId) {
+      query = query.is('user_id', null).eq('device_id', deviceId);
     } else {
       query = query.is('user_id', null);
     }
@@ -45,11 +58,16 @@ export async function GET(req: Request) {
     let { data: tasks, error } = await query.order('created_at', { ascending: false });
 
     if (error && error.code === '42703') {
-      const fallbackRes = await supabase
+      let fallbackQuery = supabase
         .from('tasks')
         .select('*')
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false });
+        .eq('status', 'pending');
+      if (user) {
+        fallbackQuery = fallbackQuery.eq('user_id', user.id);
+      } else {
+        fallbackQuery = fallbackQuery.is('user_id', null);
+      }
+      const fallbackRes = await fallbackQuery.order('created_at', { ascending: false });
       tasks = fallbackRes.data;
       error = fallbackRes.error;
     }
@@ -65,7 +83,9 @@ export async function GET(req: Request) {
       .eq('status', 'completed');
 
     if (user) {
-      completedQuery = completedQuery.or(`user_id.eq.${user.id},user_id.is.null`);
+      completedQuery = completedQuery.eq('user_id', user.id);
+    } else if (deviceId) {
+      completedQuery = completedQuery.is('user_id', null).eq('device_id', deviceId);
     } else {
       completedQuery = completedQuery.is('user_id', null);
     }
@@ -75,14 +95,20 @@ export async function GET(req: Request) {
       .limit(10);
 
     if (completedError && completedError.code === '42703') {
-      const fallbackCompleted = await supabase
+      let fallbackCompleted = supabase
         .from('tasks')
         .select('*')
-        .eq('status', 'completed')
+        .eq('status', 'completed');
+      if (user) {
+        fallbackCompleted = fallbackCompleted.eq('user_id', user.id);
+      } else {
+        fallbackCompleted = fallbackCompleted.is('user_id', null);
+      }
+      const fallbackRes = await fallbackCompleted
         .order('completed_at', { ascending: false })
         .limit(10);
-      completedTasks = fallbackCompleted.data;
-      completedError = fallbackCompleted.error;
+      completedTasks = fallbackRes.data;
+      completedError = fallbackRes.error;
     }
 
     if (completedError) {
@@ -138,6 +164,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const user = await getAuthUser(req);
+    const deviceId = getDeviceIdFromReq(req);
     const { description, fuzzy_deadline, energy_level, context } = await req.json();
 
     if (!description || typeof description !== 'string') {
@@ -153,6 +180,7 @@ export async function POST(req: Request) {
       energy_level: energy_level || 'low_focus',
       context: context || null,
       user_id: user ? user.id : null,
+      device_id: deviceId || null,
     };
 
     let { data, error } = await supabase
@@ -162,8 +190,12 @@ export async function POST(req: Request) {
       .single();
 
     if (error && error.code === '42703') {
-      delete insertPayload.user_id;
-      const fallbackRes = await supabase.from('tasks').insert(insertPayload).select().single();
+      delete insertPayload.device_id;
+      let fallbackRes = await supabase.from('tasks').insert(insertPayload).select().single();
+      if (fallbackRes.error && fallbackRes.error.code === '42703') {
+        delete insertPayload.user_id;
+        fallbackRes = await supabase.from('tasks').insert(insertPayload).select().single();
+      }
       data = fallbackRes.data;
       error = fallbackRes.error;
     }
@@ -187,6 +219,7 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   try {
     const user = await getAuthUser(req);
+    const deviceId = getDeviceIdFromReq(req);
     const { id, description, fuzzy_deadline, energy_level, status } = await req.json();
 
     if (!id) {
@@ -224,7 +257,9 @@ export async function PATCH(req: Request) {
       .eq('id', id);
 
     if (user) {
-      query = query.or(`user_id.eq.${user.id},user_id.is.null`);
+      query = query.eq('user_id', user.id);
+    } else if (deviceId) {
+      query = query.is('user_id', null).eq('device_id', deviceId);
     } else {
       query = query.is('user_id', null);
     }
@@ -232,7 +267,13 @@ export async function PATCH(req: Request) {
     let { data, error } = await query.select().single();
 
     if (error && error.code === '42703') {
-      const fallbackRes = await supabase.from('tasks').update(updatePayload).eq('id', id).select().single();
+      let fallbackQuery = supabase.from('tasks').update(updatePayload).eq('id', id);
+      if (user) {
+        fallbackQuery = fallbackQuery.eq('user_id', user.id);
+      } else {
+        fallbackQuery = fallbackQuery.is('user_id', null);
+      }
+      const fallbackRes = await fallbackQuery.select().single();
       data = fallbackRes.data;
       error = fallbackRes.error;
     }
@@ -256,6 +297,7 @@ export async function PATCH(req: Request) {
 export async function DELETE(req: Request) {
   try {
     const user = await getAuthUser(req);
+    const deviceId = getDeviceIdFromReq(req);
     const body = await req.json();
     const { id, scope } = body;
 
@@ -268,7 +310,9 @@ export async function DELETE(req: Request) {
         .eq('status', 'completed');
 
       if (user) {
-        clearQuery = clearQuery.or(`user_id.eq.${user.id},user_id.is.null`);
+        clearQuery = clearQuery.eq('user_id', user.id);
+      } else if (deviceId) {
+        clearQuery = clearQuery.is('user_id', null).eq('device_id', deviceId);
       } else {
         clearQuery = clearQuery.is('user_id', null);
       }
@@ -276,7 +320,13 @@ export async function DELETE(req: Request) {
       let { error } = await clearQuery;
 
       if (error && error.code === '42703') {
-        const fallbackRes = await supabase.from('tasks').delete().eq('status', 'completed');
+        let fallbackClear = supabase.from('tasks').delete().eq('status', 'completed');
+        if (user) {
+          fallbackClear = fallbackClear.eq('user_id', user.id);
+        } else {
+          fallbackClear = fallbackClear.is('user_id', null);
+        }
+        const fallbackRes = await fallbackClear;
         error = fallbackRes.error;
       }
 
@@ -298,7 +348,9 @@ export async function DELETE(req: Request) {
       .eq('id', id);
 
     if (user) {
-      deleteQuery = deleteQuery.or(`user_id.eq.${user.id},user_id.is.null`);
+      deleteQuery = deleteQuery.eq('user_id', user.id);
+    } else if (deviceId) {
+      deleteQuery = deleteQuery.is('user_id', null).eq('device_id', deviceId);
     } else {
       deleteQuery = deleteQuery.is('user_id', null);
     }
@@ -306,7 +358,13 @@ export async function DELETE(req: Request) {
     let { error } = await deleteQuery;
 
     if (error && error.code === '42703') {
-      const fallbackRes = await supabase.from('tasks').delete().eq('id', id);
+      let fallbackDelete = supabase.from('tasks').delete().eq('id', id);
+      if (user) {
+        fallbackDelete = fallbackDelete.eq('user_id', user.id);
+      } else {
+        fallbackDelete = fallbackDelete.is('user_id', null);
+      }
+      const fallbackRes = await fallbackDelete;
       error = fallbackRes.error;
     }
 
@@ -324,4 +382,3 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }
-

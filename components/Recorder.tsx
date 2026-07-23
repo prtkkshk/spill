@@ -7,6 +7,8 @@ import { soundEngine } from '@/lib/audio-effects';
 import { triggerHaptic } from '@/lib/haptics';
 import { queueOfflineRecording, flushOfflineQueue } from '@/lib/offline-queue';
 
+import { getDeviceIdHeader } from '@/lib/deviceId';
+
 interface RecorderProps {
   onRecordingComplete: (result: { success: boolean; recording: any; tasks: any[] }) => void;
   onErrorToast?: (title: string, message?: string) => void;
@@ -45,6 +47,7 @@ export default function Recorder({ onRecordingComplete, onErrorToast, sessionTok
 
             const res = await fetch('/api/process-recording', {
               method: 'POST',
+              headers: getDeviceIdHeader(),
               body: formData,
             });
             let data: any = {};
@@ -210,7 +213,9 @@ export default function Recorder({ onRecordingComplete, onErrorToast, sessionTok
 
       setState('parsing');
 
-      const headers: Record<string, string> = {};
+      const headers: Record<string, string> = {
+        ...getDeviceIdHeader(),
+      };
       if (sessionToken) {
         headers['Authorization'] = `Bearer ${sessionToken}`;
       }
