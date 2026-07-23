@@ -162,6 +162,7 @@ describe('API Route Unit Tests', () => {
           is: mockIs.mockReturnValue({
             select: vi.fn().mockReturnValue({
               single: mockSingle.mockResolvedValue({ data: mockCompletedTask, error: null }),
+              maybeSingle: mockSingle.mockResolvedValue({ data: mockCompletedTask, error: null }),
             }),
           }),
         }),

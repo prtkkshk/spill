@@ -269,7 +269,7 @@ export async function PATCH(req: Request) {
       query = query.is('user_id', null);
     }
 
-    let { data, error } = await query.select().single();
+    let { data, error } = await query.select().maybeSingle();
 
     if (error && error.code === '42703') {
       let fallbackQuery = supabase.from('tasks').update(updatePayload).eq('id', id);
@@ -278,7 +278,7 @@ export async function PATCH(req: Request) {
       } else {
         fallbackQuery = fallbackQuery.is('user_id', null);
       }
-      const fallbackRes = await fallbackQuery.select().single();
+      const fallbackRes = await fallbackQuery.select().maybeSingle();
       data = fallbackRes.data;
       error = fallbackRes.error;
     }
@@ -286,6 +286,10 @@ export async function PATCH(req: Request) {
     if (error) {
       console.error('Failed to update task:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (!data) {
+      return NextResponse.json({ error: 'Task not found or permission denied' }, { status: 404 });
     }
 
     return NextResponse.json({
