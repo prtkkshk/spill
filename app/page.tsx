@@ -63,6 +63,8 @@ export default function Home() {
   const [activeFilter, setActiveFilter] = useState<'all' | 'high_focus' | 'low_focus'>('all');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
+  const [isAuthReady, setIsAuthReady] = useState(false);
+
   // Listen for Supabase Auth changes
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -73,6 +75,7 @@ export default function Home() {
         setUser(session.user);
         setSessionToken(session.access_token);
       }
+      setIsAuthReady(true);
     });
 
     supabase.auth.getSession().then(({ data: { session }, error }) => {
@@ -86,6 +89,7 @@ export default function Home() {
         setUser(session.user);
         setSessionToken(session.access_token);
       }
+      setIsAuthReady(true);
     });
 
     return () => subscription.unsubscribe();
@@ -161,7 +165,7 @@ export default function Home() {
   // Fetch tasks
   const fetchTasks = async () => {
     try {
-      const clientTimeParam = encodeURIComponent(new Date().toString());
+      const clientTimeParam = encodeURIComponent(new Date().toISOString());
       const headers: Record<string, string> = {
         ...getDeviceIdHeader(),
       };
@@ -212,8 +216,10 @@ export default function Home() {
   };
 
   useEffect(() => {
-    fetchTasks();
-  }, [refreshKey, sessionToken]);
+    if (isAuthReady) {
+      fetchTasks();
+    }
+  }, [refreshKey, sessionToken, isAuthReady]);
 
   // Service worker registration
   useEffect(() => {

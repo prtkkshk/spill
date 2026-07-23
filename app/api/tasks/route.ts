@@ -32,35 +32,38 @@ export async function GET(req: Request) {
 
     const supabase = getSupabaseService();
 
-    // Auto-claim device/unassigned tasks when user is authenticated
-    if (user) {
-      try {
-        if (deviceId) {
-          await supabase.from('tasks').update({ user_id: user.id }).is('user_id', null).eq('device_id', deviceId);
-          await supabase.from('recordings').update({ user_id: user.id }).is('user_id', null).eq('device_id', deviceId);
-        } else {
-          await supabase.from('tasks').update({ user_id: user.id }).is('user_id', null);
-          await supabase.from('recordings').update({ user_id: user.id }).is('user_id', null);
-        }
-      } catch (claimErr) {
-        // Silently skip if table schema doesn't match
-      }
+    // Auto-claim device tasks non-blockingly when user is authenticated with a deviceId
+    if (user && deviceId) {
+      Promise.all([
+        supabase.from('tasks').update({ user_id: user.id }).is('user_id', null).eq('device_id', deviceId),
+        supabase.from('recordings').update({ user_id: user.id }).is('user_id', null).eq('device_id', deviceId),
+      ]).catch(() => {});
     }
 
-    let query = supabase
-      .from('tasks')
-      .select('*')
-      .eq('status', 'pending');
+    let query = supabase.from('tasks').select('*').eq('status', 'pending');
+    let completedQuery = supabase.from('tasks').select('*').eq('status', 'completed');
 
     if (user) {
       query = query.eq('user_id', user.id);
+      completedQuery = completedQuery.eq('user_id', user.id);
     } else if (deviceId) {
       query = query.is('user_id', null).eq('device_id', deviceId);
+      completedQuery = completedQuery.is('user_id', null).eq('device_id', deviceId);
     } else {
       query = query.is('user_id', null);
+      completedQuery = completedQuery.is('user_id', null);
     }
 
-    let { data: tasks, error } = await query.order('created_at', { ascending: false });
+    // Run both queries concurrently to cut response time in half
+    const [pendingRes, completedRes] = await Promise.all([
+      query.order('created_at', { ascending: false }),
+      completedQuery.order('completed_at', { ascending: false }).limit(10),
+    ]);
+
+    let tasks = pendingRes.data;
+    let error = pendingRes.error;
+    let completedTasks = completedRes.data;
+    let completedError = completedRes.error;
 
     if (error && error.code === '42703') {
       let fallbackQuery = supabase
@@ -77,28 +80,6 @@ export async function GET(req: Request) {
       error = fallbackRes.error;
     }
 
-    if (error) {
-      console.error('Failed to fetch tasks:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    let completedQuery = supabase
-      .from('tasks')
-      .select('*')
-      .eq('status', 'completed');
-
-    if (user) {
-      completedQuery = completedQuery.eq('user_id', user.id);
-    } else if (deviceId) {
-      completedQuery = completedQuery.is('user_id', null).eq('device_id', deviceId);
-    } else {
-      completedQuery = completedQuery.is('user_id', null);
-    }
-
-    let { data: completedTasks, error: completedError } = await completedQuery
-      .order('completed_at', { ascending: false })
-      .limit(10);
-
     if (completedError && completedError.code === '42703') {
       let fallbackCompleted = supabase
         .from('tasks')
@@ -114,6 +95,11 @@ export async function GET(req: Request) {
         .limit(10);
       completedTasks = fallbackRes.data;
       completedError = fallbackRes.error;
+    }
+
+    if (error) {
+      console.error('Failed to fetch tasks:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     if (completedError) {

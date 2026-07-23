@@ -24,6 +24,20 @@ export const getSupabaseService = () => {
   });
 };
 
+function isJwtExpired(token: string): boolean {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return false;
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+    if (payload && payload.exp && typeof payload.exp === 'number') {
+      return payload.exp * 1000 < Date.now();
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 // Helper to extract and verify authenticated user from request Authorization header
 export async function getAuthUser(req: Request) {
   try {
@@ -32,7 +46,7 @@ export async function getAuthUser(req: Request) {
       return null;
     }
     const token = authHeader.substring(7).trim();
-    if (!token) return null;
+    if (!token || isJwtExpired(token)) return null;
 
     const supabase = getSupabaseService();
     const { data: { user }, error } = await supabase.auth.getUser(token);
