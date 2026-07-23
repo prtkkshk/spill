@@ -32,11 +32,16 @@ export async function GET(req: Request) {
 
     const supabase = getSupabaseService();
 
-    // Auto-claim device tasks when user is authenticated
-    if (user && deviceId) {
+    // Auto-claim device/unassigned tasks when user is authenticated
+    if (user) {
       try {
-        await supabase.from('tasks').update({ user_id: user.id }).is('user_id', null).eq('device_id', deviceId);
-        await supabase.from('recordings').update({ user_id: user.id }).is('user_id', null).eq('device_id', deviceId);
+        if (deviceId) {
+          await supabase.from('tasks').update({ user_id: user.id }).is('user_id', null).eq('device_id', deviceId);
+          await supabase.from('recordings').update({ user_id: user.id }).is('user_id', null).eq('device_id', deviceId);
+        } else {
+          await supabase.from('tasks').update({ user_id: user.id }).is('user_id', null);
+          await supabase.from('recordings').update({ user_id: user.id }).is('user_id', null);
+        }
       } catch (claimErr) {
         // Silently skip if table schema doesn't match
       }
